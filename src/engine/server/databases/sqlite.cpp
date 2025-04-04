@@ -416,7 +416,7 @@ bool CSqliteConnection::AddPoints(const char *pPlayer, int Points, char *pError,
 }
 
 // Here! add
-bool CMysqlConnection::AddRPoints(const char *pPlayer, int Points, char *pError, int ErrorSize)
+bool CSqliteConnection::AddRPoints(const char *pPlayer, int Points, char *pError, int ErrorSize)
 {
 	char aBuf[512];
 	str_format(aBuf, sizeof(aBuf),
