@@ -54,7 +54,7 @@ public:
 	bool AddPoints(const char *pPlayer, int Points, char *pError, int ErrorSize) override;
 
 	// Here! add
-	virtual bool AddRPoints(const char *pPlayer, int Points, char *pError, int ErrorSize) = 0;
+	virtual bool AddRPoints(const char *pPlayer, int Points, char *pError, int ErrorSize) override;
 
 	// fail safe
 	bool CreateFailsafeTables();
