@@ -1443,12 +1443,12 @@ bool CScoreWorker::ShowPoints(IDbConnection *pSqlServer, const ISqlData *pGameDa
 	str_format(aBuf, sizeof(aBuf),
 		"SELECT"
 		"  (SELECT COUNT(Name) + 1 FROM %s_points WHERE (Points + RPoints) > (r.Points + r.RPoints)) AS TRanking, "
-		"  (r.Points + r.RPoints) AS TPoints,"
+		"  (r.Points + r.RPoints) AS TPoints, "
 		"  (SELECT COUNT(Name) + 1 FROM %s_points WHERE Points > r.Points) AS Ranking, "
-		"  r.Points AS Points,"
+		"  r.Points AS Points, "
 		"  (SELECT COUNT(Name) + 1 FROM %s_points WHERE RPoints > r.RPoints) AS RRanking, "
-		"  r.RPoints AS RPoints,"
-		"  r.Name AS Name"
+		"  r.RPoints AS RPoints, "
+		"  r.Name AS Name "
 		"FROM %s_points r WHERE r.Name = ?",
 		pSqlServer->GetPrefix(), pSqlServer->GetPrefix(), pSqlServer->GetPrefix(), pSqlServer->GetPrefix()); //
 	if(pSqlServer->PrepareStatement(aBuf, pError, ErrorSize))
