@@ -88,6 +88,9 @@ public:
 	// SQL statements, that can't be abstracted, has side effects to the result
 	virtual bool AddPoints(const char *pPlayer, int Points, char *pError, int ErrorSize) = 0;
 
+	// Here! add
+	virtual bool AddRPoints(const char *pPlayer, int Points, char *pError, int ErrorSize) = 0;
+
 private:
 	char m_aPrefix[64];
 
