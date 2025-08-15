@@ -2516,11 +2516,18 @@ void CGameContext::ConTest(IConsole::IResult *pResult, void *pUserData)
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	if(!CheckClientId(pResult->m_ClientId))
 		return;
+	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientId];
+	if(!pPlayer)
+		return;
+	CCharacter *pChr = pPlayer->GetCharacter();
+	if(!pChr)
+		return;
 
 	char aBuf[512];
-
+	char m_aGameUuid[UUID_MAXSTRSIZE];
+	FormatUuid(pChr->GameServer()->GameUuid(), m_aGameUuid, sizeof(m_aGameUuid));
 
     str_format(aBuf, sizeof(aBuf), "Name: %s, ClientId: %d, UniqueClientId: %s",
-		Server()->ClientName(pPlayer->GetCid()), pResult->m_ClientId, pSelf->GameUuid);
-    SendChat(-1, TEAM_ALL, aBuf);
+		pSelf->Server()->ClientName(pResult->m_ClientId), pResult->m_ClientId, m_aGameUuid);
+    pSelf->SendChatTarget(pResult->m_ClientId, aBuf);
 }
