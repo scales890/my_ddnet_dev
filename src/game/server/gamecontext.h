@@ -527,6 +527,9 @@ private:
 
 	static void ConReloadCensorlist(IConsole::IResult *pResult, void *pUserData);
 
+	//Here! add test
+	static void ConTest(IConsole::IResult *pResult, void *pUserData);
+
 	CCharacter *GetPracticeCharacter(IConsole::IResult *pResult);
 
 	enum

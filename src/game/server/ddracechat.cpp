@@ -2509,3 +2509,18 @@ void CGameContext::ConTimeCP(IConsole::IResult *pResult, void *pUserData)
 	const char *pName = pResult->GetString(0);
 	pSelf->Score()->LoadPlayerTimeCp(pResult->m_ClientId, pName);
 }
+
+// Here! add test
+void CGameContext::ConTest(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	if(!CheckClientId(pResult->m_ClientId))
+		return;
+
+	char aBuf[512];
+
+
+    str_format(aBuf, sizeof(aBuf), "Name: %s, ClientId: %d, UniqueClientId: %s",
+		Server()->ClientName(pPlayer->GetCid()), pResult->m_ClientId, pSelf->GameUuid);
+    SendChat(-1, TEAM_ALL, aBuf);
+}
