@@ -25,6 +25,13 @@ void CLayers::Init(IMap *pMap, bool GameOnly)
 		for(int LayerIndex = 0; LayerIndex < pGroup->m_NumLayers; LayerIndex++)
 		{
 			CMapItemLayer *pLayer = GetLayer(pGroup->m_StartLayer + LayerIndex);
+
+			//Here! add
+			if(pLayer->m_Type == LAYERTYPE_QUADS)
+			{
+				m_pQuadsLayer = reinterpret_cast<CMapItemLayerQuads *>(pLayer);
+			}
+
 			if(pLayer->m_Type != LAYERTYPE_TILES)
 				continue;
 
@@ -134,6 +141,9 @@ void CLayers::Unload()
 	m_pFrontLayer = nullptr;
 	m_pSwitchLayer = nullptr;
 	m_pTuneLayer = nullptr;
+
+	//Here! add
+	m_pQuadsLayer = nullptr;
 }
 
 void CLayers::InitTilemapSkip()

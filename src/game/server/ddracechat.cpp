@@ -2509,3 +2509,41 @@ void CGameContext::ConTimeCP(IConsole::IResult *pResult, void *pUserData)
 	const char *pName = pResult->GetString(0);
 	pSelf->Score()->LoadPlayerTimeCp(pResult->m_ClientId, pName);
 }
+
+void CGameContext::ConTest(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	
+	if(!CheckClientId(pResult->m_ClientId))
+		return;
+
+	char aBuf[256];
+
+	str_format(aBuf, sizeof(aBuf), "Groups Num: %d | Layers Num: %d", pSelf->m_Layers.NumGroups(), pSelf->m_Layers.NumGroups());
+	pSelf->SendChatTarget(pResult->m_ClientId, aBuf);
+
+	for(int g = 0; g < pSelf->m_Layers.NumGroups(); g++)
+	{
+		CMapItemGroup *pGroup = pSelf->m_Layers.GetGroup(g);
+
+		for(int l = 0; l < pGroup->m_NumLayers; l++)
+		{
+			CMapItemLayer *pLayer = pSelf->m_Layers.GetLayer(pGroup->m_StartLayer + l);
+
+			if(pLayer->m_Type == LAYERTYPE_QUADS)
+			{
+				CMapItemLayerQuads *pQLayer = (CMapItemLayerQuads *)pLayer;
+				//CQuad *pQuads = (CQuad *)pSelf->m_Layers.Map()->GetDataSwapped(pQLayer->m_Data);
+
+				str_format(aBuf, sizeof(aBuf), 
+					"QLayer Name: %d | "
+					"Quads Num: %d", 
+					pQLayer->m_aName, 
+					pQLayer->m_NumQuads);
+				pSelf->SendChatTarget(pResult->m_ClientId, aBuf);
+			}
+		}
+	}
+	//str_format(aBuf, sizeof(aBuf), "test command")
+	//pSelf->SendChatTarget(pResult->m_ClientId, aBuf);
+}

@@ -8,6 +8,7 @@ class IMap;
 class CMapItemGroup;
 class CMapItemLayer;
 class CMapItemLayerTilemap;
+class CMapItemLayerQuads;
 
 class CLayers
 {
@@ -32,6 +33,9 @@ public:
 	CMapItemLayerTilemap *SwitchLayer() const { return m_pSwitchLayer; }
 	CMapItemLayerTilemap *TuneLayer() const { return m_pTuneLayer; }
 
+	//Here! add
+	CMapItemLayerQuads *QuadsLayer() const { return m_pQuadsLayer; }
+
 private:
 	int m_GroupsNum;
 	int m_GroupsStart;
@@ -47,6 +51,9 @@ private:
 	CMapItemLayerTilemap *m_pFrontLayer;
 	CMapItemLayerTilemap *m_pSwitchLayer;
 	CMapItemLayerTilemap *m_pTuneLayer;
+
+	//Here! add
+	CMapItemLayerQuads *m_pQuadsLayer;
 
 	void InitTilemapSkip();
 };
