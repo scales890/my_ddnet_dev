@@ -426,7 +426,7 @@ bool CSqliteConnection::AddRPoints(const char *pPlayer, int Points, char *pError
 	str_format(aBuf, sizeof(aBuf),
 		"INSERT INTO %s_points(Name, RPoints) "
 		"VALUES (?, ?) "
-		"ON DUPLICATE KEY UPDATE RPoints=RPoints+?",
+		"ON CONFLICT(Name) DO UPDATE SET RPoints = RPoints + ?",
 		GetPrefix());
 	if(PrepareStatement(aBuf, pError, ErrorSize))
 	{

@@ -1487,6 +1487,7 @@ bool CScoreWorker::ShowPoints(IDbConnection *pSqlServer, const ISqlData *pGameDa
 			"%d. %s - Points: %d (%d. Fixed: %d, %d. Repeat: %d), requested by %s",
 			TRank, aName, TCount, Rank, Count, RRank, RCount, pData->m_aRequestingPlayer); //
 	}
+	return true;
 }
 
 bool CScoreWorker::ShowTopPoints(IDbConnection *pSqlServer, const ISqlData *pGameData, char *pError, int ErrorSize)
