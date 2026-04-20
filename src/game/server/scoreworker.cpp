@@ -616,23 +616,23 @@ bool CScoreWorker::SaveScore(IDbConnection *pSqlServer, const ISqlData *pGameDat
 		else
 		{
 			str_format(aBuf, sizeof(aBuf), "SELECT Points FROM %s_maps WHERE Map=?", pSqlServer->GetPrefix());
-			if(pSqlServer->PrepareStatement(aBuf, pError, ErrorSize))
+			if(!pSqlServer->PrepareStatement(aBuf, pError, ErrorSize))
 			{
-				return true;
+				return false;
 			}
 			pSqlServer->BindString(1, pData->m_aMap);
 
 			bool End2;
-			if(pSqlServer->Step(&End2, pError, ErrorSize))
+			if(!pSqlServer->Step(&End2, pError, ErrorSize))
 			{
-				return true;
+				return false;
 			}
 			if(!End2)
 			{
 				int Points = pSqlServer->GetInt(1);
-				if(pSqlServer->AddRPoints(pData->m_aName, Points, pError, ErrorSize))
+				if(!pSqlServer->AddRPoints(pData->m_aName, Points, pError, ErrorSize))
 				{
-					return true;
+					return false;
 				}
 				str_format(paMessages[0], sizeof(paMessages[0]),
 					"You earned %d repeat point%s for finishing this map again!",
@@ -1451,26 +1451,26 @@ bool CScoreWorker::ShowPoints(IDbConnection *pSqlServer, const ISqlData *pGameDa
 
 	char aBuf[512];
 	str_format(aBuf, sizeof(aBuf),
-		"SELECT"
-		"  (SELECT COUNT(Name) + 1 FROM %s_points WHERE (Points + RPoints) > (r.Points + r.RPoints)) AS TRanking, "
-		"  (r.Points + r.RPoints) AS TPoints,"
-		"  (SELECT COUNT(Name) + 1 FROM %s_points WHERE Points > r.Points) AS Ranking, "
-		"  r.Points AS Points,"
-		"  (SELECT COUNT(Name) + 1 FROM %s_points WHERE RPoints > r.RPoints) AS RRanking, "
-		"  r.RPoints AS RPoints,"
-		"  r.Name AS Name"
+		"SELECT "
+		"(SELECT COUNT(Name) + 1 FROM %s_points WHERE (Points + RPoints) > (r.Points + r.RPoints)) AS TRanking, "
+		"(r.Points + r.RPoints) AS TPoints, "
+		"(SELECT COUNT(Name) + 1 FROM %s_points WHERE Points > r.Points) AS Ranking, "
+		"r.Points AS Points, "
+		"(SELECT COUNT(Name) + 1 FROM %s_points WHERE RPoints > r.RPoints) AS RRanking, "
+		"r.RPoints AS RPoints, "
+		"r.Name AS Name "
 		"FROM %s_points r WHERE r.Name = ?",
 		pSqlServer->GetPrefix(), pSqlServer->GetPrefix(), pSqlServer->GetPrefix(), pSqlServer->GetPrefix()); //
-	if(pSqlServer->PrepareStatement(aBuf, pError, ErrorSize))
+	if(!pSqlServer->PrepareStatement(aBuf, pError, ErrorSize))
 	{
-		return true;
+		return false;
 	}
 	pSqlServer->BindString(1, pData->m_aName);
 
 	bool End;
-	if(pSqlServer->Step(&End, pError, ErrorSize))
+	if(!pSqlServer->Step(&End, pError, ErrorSize))
 	{
-		return true;
+		return false;
 	}
 	if(!End)
 	{
