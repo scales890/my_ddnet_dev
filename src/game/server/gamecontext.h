@@ -627,6 +627,9 @@ private:
 	bool m_aLoginPending[MAX_CLIENTS]{};
 	bool m_aLoginAuthed[MAX_CLIENTS]{};
 	int m_aLastLoginTryTick[MAX_CLIENTS]{};
+	int m_aLoginBurstWindowStartTick[MAX_CLIENTS]{};
+	int m_aLoginBurstCount[MAX_CLIENTS]{};
+	int m_aLoginBlockedUntilTick[MAX_CLIENTS]{};
 	std::shared_ptr<CLoginAuthResult> m_apLoginAuthResult[MAX_CLIENTS];
 
 	enum

@@ -547,6 +547,9 @@ MACRO_CONFIG_INT(SvGlobalEmoticonMsDelay, sv_global_emoticon_ms_delay, 3000, 20,
 MACRO_CONFIG_INT(SvEyeEmoteChangeDelay, sv_eye_emote_change_delay, 1, 0, 9999, CFGFLAG_SERVER, "The time in seconds between eye emoticons change")
 
 MACRO_CONFIG_INT(SvChatDelay, sv_chat_delay, 1, 0, 9999, CFGFLAG_SERVER, "The time in seconds between chat messages")
+MACRO_CONFIG_INT(SvLoginRateLimitWindow, sv_login_rate_limit_window, 10, 1, 3600, CFGFLAG_SERVER, "Time window in seconds for /login rate limiting")
+MACRO_CONFIG_INT(SvLoginRateLimitAttempts, sv_login_rate_limit_attempts, 5, 1, 1000, CFGFLAG_SERVER, "Maximum /login attempts allowed in the rate limit window")
+MACRO_CONFIG_INT(SvLoginRateLimitBlockMinutes, sv_login_rate_limit_block_minutes, 1, 1, 1440, CFGFLAG_SERVER, "How many minutes /login stays blocked after exceeding the rate limit")
 MACRO_CONFIG_INT(SvTeamChangeDelay, sv_team_change_delay, 3, 0, 9999, CFGFLAG_SERVER, "The time in seconds between team changes (spectator/in game)")
 MACRO_CONFIG_INT(SvInfoChangeDelay, sv_info_change_delay, 5, 0, 9999, CFGFLAG_SERVER, "The time in seconds between info changes (name/skin/color), to avoid ranbow mod set this to a very high time")
 MACRO_CONFIG_INT(SvVoteTime, sv_vote_time, 25, 1, 60, CFGFLAG_SERVER, "The time in seconds a vote lasts")

@@ -1913,6 +1913,9 @@ void CGameContext::OnClientConnected(int ClientId, void *pData)
 	m_aLoginAuthed[ClientId] = LoginAuthed;
 	m_aLoginPending[ClientId] = false;
 	m_apLoginAuthResult[ClientId] = nullptr;
+	m_aLoginBurstWindowStartTick[ClientId] = 0;
+	m_aLoginBurstCount[ClientId] = 0;
+	m_aLoginBlockedUntilTick[ClientId] = 0;
 
 	SendMotd(ClientId);
 	SendSettings(ClientId);
@@ -1929,6 +1932,9 @@ void CGameContext::OnClientDrop(int ClientId, const char *pReason)
 	m_aLoginAuthed[ClientId] = false;
 	m_aLastLoginTryTick[ClientId] = 0;
 	m_apLoginAuthResult[ClientId] = nullptr;
+	m_aLoginBurstWindowStartTick[ClientId] = 0;
+	m_aLoginBurstCount[ClientId] = 0;
+	m_aLoginBlockedUntilTick[ClientId] = 0;
 
 	AbortVoteKickOnDisconnect(ClientId);
 	m_pController->OnPlayerDisconnect(m_apPlayers[ClientId], pReason);
@@ -5543,9 +5549,41 @@ void CGameContext::StartLoginVerify(int ClientId, const char *pToken)
 		return;
 	}
 
+	const int TickNow = Server()->Tick();
+	const int TickSpeed = Server()->TickSpeed();
+	const int BurstWindowTicks = TickSpeed * g_Config.m_SvLoginRateLimitWindow;
+	const int BurstMaxAttempts = g_Config.m_SvLoginRateLimitAttempts;
+	const int BlockMinutes = g_Config.m_SvLoginRateLimitBlockMinutes;
+	const int BlockTicks = TickSpeed * 60 * BlockMinutes;
+
+	if(m_aLoginBlockedUntilTick[ClientId] > TickNow)
+	{
+		// Blocked clients are rejected silently to avoid extra spam load.
+		return;
+	}
+
+	if(m_aLoginBurstWindowStartTick[ClientId] == 0 ||
+		TickNow - m_aLoginBurstWindowStartTick[ClientId] > BurstWindowTicks)
+	{
+		m_aLoginBurstWindowStartTick[ClientId] = TickNow;
+		m_aLoginBurstCount[ClientId] = 0;
+	}
+	m_aLoginBurstCount[ClientId]++;
+	if(m_aLoginBurstCount[ClientId] > BurstMaxAttempts)
+	{
+		m_aLoginBlockedUntilTick[ClientId] = TickNow + BlockTicks;
+		m_aLoginBurstWindowStartTick[ClientId] = 0;
+		m_aLoginBurstCount[ClientId] = 0;
+		dbg_msg("login", "client=%d name='%s' login blocked for %d minute(s) due to rate limit", ClientId, Server()->ClientName(ClientId), BlockMinutes);
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), "Too many /login attempts. Login blocked for %d minute(s).", BlockMinutes);
+		SendChatTarget(ClientId, aBuf);
+		return;
+	}
+
 	const int CooldownTicks = Server()->TickSpeed() * 3;
 	if(m_aLastLoginTryTick[ClientId] > 0 &&
-		m_aLastLoginTryTick[ClientId] + CooldownTicks > Server()->Tick())
+		m_aLastLoginTryTick[ClientId] + CooldownTicks > TickNow)
 	{
 		SendChatTarget(ClientId, "Please wait before trying /login again.");
 		return;
@@ -5557,7 +5595,7 @@ void CGameContext::StartLoginVerify(int ClientId, const char *pToken)
 		return;
 	}
 
-	m_aLastLoginTryTick[ClientId] = Server()->Tick();
+	m_aLastLoginTryTick[ClientId] = TickNow;
 	m_aLoginPending[ClientId] = true;
 	m_apLoginAuthResult[ClientId] = std::make_shared<CLoginAuthResult>();
 
@@ -5592,9 +5630,13 @@ void CGameContext::OnLoginVerifyResult(int ClientId, bool Success, const char *p
 	}
 
 	m_aLoginAuthed[ClientId] = true;
+	m_aLoginBurstWindowStartTick[ClientId] = 0;
+	m_aLoginBurstCount[ClientId] = 0;
+	m_aLoginBlockedUntilTick[ClientId] = 0;
 	if(m_apPlayers[ClientId]->GetTeam() == TEAM_SPECTATORS)
 	{
 		m_apPlayers[ClientId]->SetTeam(m_pController->GetAutoTeam(ClientId), false);
 	}
+	dbg_msg("login", "client=%d name='%s' login success", ClientId, Server()->ClientName(ClientId));
 	SendChatTarget(ClientId, "Login success.");
 }
