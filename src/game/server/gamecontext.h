@@ -196,6 +196,7 @@ class CGameContext : public IGameServer
 
 		//Here! add
 		bool m_IsLoginAuthed;
+		char m_aLoginAuthedName[MAX_NAME_LENGTH];
 	};
 
 public:
@@ -618,14 +619,18 @@ private:
 	bool IsVersionBanned(int Version);
 	void UnlockTeam(int ClientId, int Team) const;
 	void AttemptJoinTeam(int ClientId, int Team);
+	const char *GetScoreSaveName(int ClientId) const;
 
 	//Here! add
 	static void ConLogin(IConsole::IResult *pResult, void *pUserData);
 	void StartLoginVerify(int ClientId, const char *pToken);
 	void OnLoginVerifyResult(int ClientId, bool Success, const char *pMessage);
 
+
+	//Here! add
 	bool m_aLoginPending[MAX_CLIENTS]{};
 	bool m_aLoginAuthed[MAX_CLIENTS]{};
+	char m_aaLoginAuthedName[MAX_CLIENTS][MAX_NAME_LENGTH]{};
 	int m_aLastLoginTryTick[MAX_CLIENTS]{};
 	int m_aLoginBurstWindowStartTick[MAX_CLIENTS]{};
 	int m_aLoginBurstCount[MAX_CLIENTS]{};

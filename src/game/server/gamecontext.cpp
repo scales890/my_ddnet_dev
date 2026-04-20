@@ -1851,6 +1851,7 @@ bool CGameContext::OnClientDataPersist(int ClientId, void *pData)
 
 	//Here! add
 	pPersistent->m_IsLoginAuthed = m_aLoginAuthed[ClientId];
+	str_copy(pPersistent->m_aLoginAuthedName, m_aaLoginAuthedName[ClientId], sizeof(pPersistent->m_aLoginAuthedName));
 
 	return true;
 }
@@ -1864,6 +1865,7 @@ void CGameContext::OnClientConnected(int ClientId, void *pData)
 
 	//Here! add
 	bool LoginAuthed = false;
+	char aLoginAuthedName[MAX_NAME_LENGTH] = {0};
 
 	if(pPersistentData)
 	{
@@ -1873,6 +1875,7 @@ void CGameContext::OnClientConnected(int ClientId, void *pData)
 		
 		//Here! add
 		LoginAuthed = pPersistentData->m_IsLoginAuthed;
+		str_copy(aLoginAuthedName, pPersistentData->m_aLoginAuthedName, sizeof(aLoginAuthedName));
 	}
 	else
 	{
@@ -1911,6 +1914,7 @@ void CGameContext::OnClientConnected(int ClientId, void *pData)
 	const int StartTeam = (FirstConnectNoPersist || Spec || g_Config.m_SvTournamentMode) ? TEAM_SPECTATORS : m_pController->GetAutoTeam(ClientId);
 	CreatePlayer(ClientId, StartTeam, Afk, LastWhisperTo);
 	m_aLoginAuthed[ClientId] = LoginAuthed;
+	str_copy(m_aaLoginAuthedName[ClientId], aLoginAuthedName, sizeof(m_aaLoginAuthedName[ClientId]));
 	m_aLoginPending[ClientId] = false;
 	m_apLoginAuthResult[ClientId] = nullptr;
 	m_aLoginBurstWindowStartTick[ClientId] = 0;
@@ -1930,6 +1934,7 @@ void CGameContext::OnClientDrop(int ClientId, const char *pReason)
 	//Here! add
 	m_aLoginPending[ClientId] = false;
 	m_aLoginAuthed[ClientId] = false;
+	m_aaLoginAuthedName[ClientId][0] = '\0';
 	m_aLastLoginTryTick[ClientId] = 0;
 	m_apLoginAuthResult[ClientId] = nullptr;
 	m_aLoginBurstWindowStartTick[ClientId] = 0;
@@ -5630,6 +5635,7 @@ void CGameContext::OnLoginVerifyResult(int ClientId, bool Success, const char *p
 	}
 
 	m_aLoginAuthed[ClientId] = true;
+	str_copy(m_aaLoginAuthedName[ClientId], Server()->ClientName(ClientId), sizeof(m_aaLoginAuthedName[ClientId]));
 	m_aLoginBurstWindowStartTick[ClientId] = 0;
 	m_aLoginBurstCount[ClientId] = 0;
 	m_aLoginBlockedUntilTick[ClientId] = 0;
@@ -5639,4 +5645,15 @@ void CGameContext::OnLoginVerifyResult(int ClientId, bool Success, const char *p
 	}
 	dbg_msg("login", "client=%d name='%s' login success", ClientId, Server()->ClientName(ClientId));
 	SendChatTarget(ClientId, "Login success.");
+}
+
+const char *CGameContext::GetScoreSaveName(int ClientId) const
+{
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return "";
+
+	if(m_aLoginAuthed[ClientId] && m_aaLoginAuthedName[ClientId][0] != '\0')
+		return m_aaLoginAuthedName[ClientId];
+
+	return Server()->ClientName(ClientId);
 }
