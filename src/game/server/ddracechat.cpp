@@ -2392,3 +2392,20 @@ void CGameContext::ConTimeCP(IConsole::IResult *pResult, void *pUserData)
 	const char *pName = pResult->GetString(0);
 	pSelf->Score()->LoadPlayerTimeCp(pResult->m_ClientId, pName);
 }
+
+//Here! add
+void CGameContext::ConLogin(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	if(!CheckClientId(pResult->m_ClientId))
+		return;
+
+	const char *pToken = pResult->GetString(0);
+	if(!pToken || pToken[0] == '\0')
+	{
+		pSelf->SendChatTarget(pResult->m_ClientId, "Usage: /login <token>");
+		return;
+	}
+
+	pSelf->StartLoginVerify(pResult->m_ClientId, pToken);
+}

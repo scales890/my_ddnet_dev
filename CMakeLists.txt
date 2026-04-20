@@ -2884,6 +2884,9 @@ if(SERVER)
     gamemodes/mod.h
     gameworld.cpp
     gameworld.h
+    # Here! add
+    loginauthworker.cpp
+    loginauthworker.h
     mutes.cpp
     player.cpp
     player.h

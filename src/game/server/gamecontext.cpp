@@ -1169,6 +1169,16 @@ void CGameContext::OnTick()
 
 			m_apPlayers[i]->Tick();
 			m_apPlayers[i]->PostTick();
+
+			//Here! add
+			if(m_apLoginAuthResult[i] != nullptr && m_apLoginAuthResult[i]->m_Completed)
+			{
+				const bool Success = m_apLoginAuthResult[i]->m_Success && m_apLoginAuthResult[i]->m_AuthSuccess;
+				char aMsg[128];
+				str_copy(aMsg, m_apLoginAuthResult[i]->m_aMessage, sizeof(aMsg));
+				m_apLoginAuthResult[i] = nullptr;
+				OnLoginVerifyResult(i, Success, aMsg);
+			}
 		}
 	}
 
@@ -1880,8 +1890,14 @@ void CGameContext::OnClientConnected(int ClientId, void *pData)
 		}
 	}
 
+	//Here! add
+	// Force spectator only on first real connect (no persisted state).
+	const bool FirstConnectNoPersist = pPersistentData == nullptr;
+
 	// Check which team the player should be on
-	const int StartTeam = (Spec || g_Config.m_SvTournamentMode) ? TEAM_SPECTATORS : m_pController->GetAutoTeam(ClientId);
+	
+	//Here! add
+	const int StartTeam = (FirstConnectNoPersist || Spec || g_Config.m_SvTournamentMode) ? TEAM_SPECTATORS : m_pController->GetAutoTeam(ClientId);
 	CreatePlayer(ClientId, StartTeam, Afk, LastWhisperTo);
 
 	SendMotd(ClientId);
@@ -1893,6 +1909,12 @@ void CGameContext::OnClientConnected(int ClientId, void *pData)
 void CGameContext::OnClientDrop(int ClientId, const char *pReason)
 {
 	LogEvent("Disconnect", ClientId);
+
+	//Here! add
+	m_aLoginPending[ClientId] = false;
+	m_aLoginAuthed[ClientId] = false;
+	m_aLastLoginTryTick[ClientId] = 0;
+	m_apLoginAuthResult[ClientId] = nullptr;
 
 	AbortVoteKickOnDisconnect(ClientId);
 	m_pController->OnPlayerDisconnect(m_apPlayers[ClientId], pReason);
@@ -4143,6 +4165,9 @@ void CGameContext::RegisterChatCommands()
 	Console()->Register("hitothers", "?s['all'|'hammer'|'shotgun'|'grenade'|'laser']", CFGFLAG_CHAT | CMDFLAG_PRACTICE, ConPracticeToggleHitOthers, this, "Toggles hit others");
 
 	Console()->Register("kill", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConProtectedKill, this, "Kill yourself when kill-protected during a long game (use f1, kill for regular kill)");
+
+	//Here! add
+	Console()->Register("login", "r[token]", CFGFLAG_CHAT | CFGFLAG_SERVER | CFGFLAG_NONTEEHISTORIC, ConLogin, this, "Login with token");
 }
 
 void CGameContext::OnInit(const void *pPersistentData)
@@ -5490,4 +5515,72 @@ void CGameContext::ReadCensorList()
 bool CGameContext::PracticeByDefault() const
 {
 	return g_Config.m_SvPracticeByDefault && g_Config.m_SvTestingCommands;
+}
+
+//Here! add
+void CGameContext::StartLoginVerify(int ClientId, const char *pToken)
+{
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !m_apPlayers[ClientId])
+		return;
+
+	if(m_aLoginAuthed[ClientId])
+	{
+		SendChatTarget(ClientId, "You are already logged in.");
+		return;
+	}
+
+	const int CooldownTicks = Server()->TickSpeed() * 3;
+	if(m_aLastLoginTryTick[ClientId] > 0 &&
+		m_aLastLoginTryTick[ClientId] + CooldownTicks > Server()->Tick())
+	{
+		SendChatTarget(ClientId, "Please wait before trying /login again.");
+		return;
+	}
+
+	if(m_aLoginPending[ClientId])
+	{
+		SendChatTarget(ClientId, "Login verification is already in progress.");
+		return;
+	}
+
+	m_aLastLoginTryTick[ClientId] = Server()->Tick();
+	m_aLoginPending[ClientId] = true;
+	m_apLoginAuthResult[ClientId] = std::make_shared<CLoginAuthResult>();
+
+	auto pRequest = std::make_unique<CSqlLoginAuthRequest>(m_apLoginAuthResult[ClientId]);
+	pRequest->m_ClientId = ClientId;
+	str_copy(pRequest->m_aToken, pToken, sizeof(pRequest->m_aToken));
+	str_copy(pRequest->m_aRequestingPlayer, Server()->ClientName(ClientId), sizeof(pRequest->m_aRequestingPlayer));
+
+	((CServer *)Server())->DbPool()->Execute(CLoginAuthWorker::VerifyToken, std::move(pRequest), "login verify");
+}
+
+void CGameContext::OnLoginVerifyResult(int ClientId, bool Success, const char *pMessage)
+{
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !m_apPlayers[ClientId])
+		return;
+
+	m_aLoginPending[ClientId] = false;
+
+	if(!Success)
+	{
+		if(pMessage && pMessage[0] != '\0' && str_comp(pMessage, "OK") != 0)
+		{
+			char aBuf[192];
+			str_format(aBuf, sizeof(aBuf), "Login failed: %s", pMessage);
+			SendChatTarget(ClientId, aBuf);
+		}
+		else
+		{
+			SendChatTarget(ClientId, "Login verification failed (server error). Please try again later.");
+		}
+		return;
+	}
+
+	m_aLoginAuthed[ClientId] = true;
+	if(m_apPlayers[ClientId]->GetTeam() == TEAM_SPECTATORS)
+	{
+		m_apPlayers[ClientId]->SetTeam(m_pController->GetAutoTeam(ClientId), false);
+	}
+	SendChatTarget(ClientId, "Login success.");
 }

@@ -24,6 +24,9 @@
 #include <optional>
 #include <string>
 
+//Here! add
+#include "loginauthworker.h"
+
 /*
 	Tick
 		Game Context (CGameContext::tick)
@@ -176,7 +179,7 @@ class CGameContext : public IGameServer
 	static void ConchainSettingUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainPracticeByDefaultUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConDumpLog(IConsole::IResult *pResult, void *pUserData);
-
+	
 	void AddVote(const char *pDescription, const char *pCommand);
 	static int MapScan(const char *pName, int IsDir, int DirType, void *pUserData);
 
@@ -612,6 +615,16 @@ private:
 	bool IsVersionBanned(int Version);
 	void UnlockTeam(int ClientId, int Team) const;
 	void AttemptJoinTeam(int ClientId, int Team);
+
+	//Here! add
+	static void ConLogin(IConsole::IResult *pResult, void *pUserData);
+	void StartLoginVerify(int ClientId, const char *pToken);
+	void OnLoginVerifyResult(int ClientId, bool Success, const char *pMessage);
+
+	bool m_aLoginPending[MAX_CLIENTS]{};
+	bool m_aLoginAuthed[MAX_CLIENTS]{};
+	int m_aLastLoginTryTick[MAX_CLIENTS]{};
+	std::shared_ptr<CLoginAuthResult> m_apLoginAuthResult[MAX_CLIENTS];
 
 	enum
 	{
