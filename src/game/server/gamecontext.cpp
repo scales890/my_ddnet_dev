@@ -1848,6 +1848,10 @@ bool CGameContext::OnClientDataPersist(int ClientId, void *pData)
 	pPersistent->m_IsSpectator = m_apPlayers[ClientId]->GetTeam() == TEAM_SPECTATORS;
 	pPersistent->m_IsAfk = m_apPlayers[ClientId]->IsAfk();
 	pPersistent->m_LastWhisperTo = m_apPlayers[ClientId]->m_LastWhisperTo;
+
+	//Here! add
+	pPersistent->m_IsLoginAuthed = m_aLoginAuthed[ClientId];
+
 	return true;
 }
 
@@ -1857,11 +1861,18 @@ void CGameContext::OnClientConnected(int ClientId, void *pData)
 	bool Spec = false;
 	bool Afk = true;
 	int LastWhisperTo = -1;
+
+	//Here! add
+	bool LoginAuthed = false;
+
 	if(pPersistentData)
 	{
 		Spec = pPersistentData->m_IsSpectator;
 		Afk = pPersistentData->m_IsAfk;
 		LastWhisperTo = pPersistentData->m_LastWhisperTo;
+		
+		//Here! add
+		LoginAuthed = pPersistentData->m_IsLoginAuthed;
 	}
 	else
 	{
@@ -1899,6 +1910,9 @@ void CGameContext::OnClientConnected(int ClientId, void *pData)
 	//Here! add
 	const int StartTeam = (FirstConnectNoPersist || Spec || g_Config.m_SvTournamentMode) ? TEAM_SPECTATORS : m_pController->GetAutoTeam(ClientId);
 	CreatePlayer(ClientId, StartTeam, Afk, LastWhisperTo);
+	m_aLoginAuthed[ClientId] = LoginAuthed;
+	m_aLoginPending[ClientId] = false;
+	m_apLoginAuthResult[ClientId] = nullptr;
 
 	SendMotd(ClientId);
 	SendSettings(ClientId);
