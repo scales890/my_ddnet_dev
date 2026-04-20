@@ -57,6 +57,9 @@ public:
 
 	bool AddPoints(const char *pPlayer, int Points, char *pError, int ErrorSize) override;
 
+	//Here! add
+	bool AddRPoints(const char *pPlayer, int Points, char *pError, int ErrorSize) override;
+
 	// fail safe
 	bool CreateFailsafeTables();
 
@@ -414,6 +417,26 @@ bool CSqliteConnection::AddPoints(const char *pPlayer, int Points, char *pError,
 	BindInt(3, Points);
 	bool End;
 	return Step(&End, pError, ErrorSize);
+}
+
+//Here! add
+bool CSqliteConnection::AddRPoints(const char *pPlayer, int Points, char *pError, int ErrorSize)
+{
+	char aBuf[512];
+	str_format(aBuf, sizeof(aBuf),
+		"INSERT INTO %s_points(Name, RPoints) "
+		"VALUES (?, ?) "
+		"ON DUPLICATE KEY UPDATE RPoints=RPoints+?",
+		GetPrefix());
+	if(PrepareStatement(aBuf, pError, ErrorSize))
+	{
+		return true;
+	}
+	BindString(1, pPlayer);
+	BindInt(2, Points);
+	BindInt(3, Points);
+	int NumUpdated;
+	return ExecuteUpdate(&NumUpdated, pError, ErrorSize);
 }
 
 std::unique_ptr<IDbConnection> CreateSqliteConnection(const char *pFilename, bool Setup)

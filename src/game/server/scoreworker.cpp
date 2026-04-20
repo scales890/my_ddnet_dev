@@ -612,6 +612,33 @@ bool CScoreWorker::SaveScore(IDbConnection *pSqlServer, const ISqlData *pGameDat
 					Points, Points == 1 ? "" : "s");
 			}
 		}
+		//Here! add
+		else
+		{
+			str_format(aBuf, sizeof(aBuf), "SELECT Points FROM %s_maps WHERE Map=?", pSqlServer->GetPrefix());
+			if(pSqlServer->PrepareStatement(aBuf, pError, ErrorSize))
+			{
+				return true;
+			}
+			pSqlServer->BindString(1, pData->m_aMap);
+
+			bool End2;
+			if(pSqlServer->Step(&End2, pError, ErrorSize))
+			{
+				return true;
+			}
+			if(!End2)
+			{
+				int Points = pSqlServer->GetInt(1);
+				if(pSqlServer->AddRPoints(pData->m_aName, Points, pError, ErrorSize))
+				{
+					return true;
+				}
+				str_format(paMessages[0], sizeof(paMessages[0]),
+					"You earned %d repeat point%s for finishing this map again!",
+					Points, Points == 1 ? "" : "s");
+			}
+		}
 	}
 
 	// save score. Can't fail, because no UNIQUE/PRIMARY KEY constrain is defined.
@@ -1415,6 +1442,7 @@ bool CScoreWorker::ShowTimes(IDbConnection *pSqlServer, const ISqlData *pGameDat
 	return true;
 }
 
+// Here! revise
 bool CScoreWorker::ShowPoints(IDbConnection *pSqlServer, const ISqlData *pGameData, char *pError, int ErrorSize)
 {
 	const auto *pData = dynamic_cast<const CSqlPlayerRequest *>(pGameData);
@@ -1423,41 +1451,42 @@ bool CScoreWorker::ShowPoints(IDbConnection *pSqlServer, const ISqlData *pGameDa
 
 	char aBuf[512];
 	str_format(aBuf, sizeof(aBuf),
-		"SELECT ("
-		"  SELECT COUNT(Name) + 1 FROM %s_points WHERE Points > ("
-		"    SELECT Points FROM %s_points WHERE Name = ?"
-		")) as Ranking, Points, Name "
-		"FROM %s_points WHERE Name = ?",
-		pSqlServer->GetPrefix(), pSqlServer->GetPrefix(), pSqlServer->GetPrefix());
-	if(!pSqlServer->PrepareStatement(aBuf, pError, ErrorSize))
+		"SELECT"
+		"  (SELECT COUNT(Name) + 1 FROM %s_points WHERE (Points + RPoints) > (r.Points + r.RPoints)) AS TRanking, "
+		"  (r.Points + r.RPoints) AS TPoints,"
+		"  (SELECT COUNT(Name) + 1 FROM %s_points WHERE Points > r.Points) AS Ranking, "
+		"  r.Points AS Points,"
+		"  (SELECT COUNT(Name) + 1 FROM %s_points WHERE RPoints > r.RPoints) AS RRanking, "
+		"  r.RPoints AS RPoints,"
+		"  r.Name AS Name"
+		"FROM %s_points r WHERE r.Name = ?",
+		pSqlServer->GetPrefix(), pSqlServer->GetPrefix(), pSqlServer->GetPrefix(), pSqlServer->GetPrefix()); //
+	if(pSqlServer->PrepareStatement(aBuf, pError, ErrorSize))
 	{
-		return false;
+		return true;
 	}
 	pSqlServer->BindString(1, pData->m_aName);
-	pSqlServer->BindString(2, pData->m_aName);
 
 	bool End;
-	if(!pSqlServer->Step(&End, pError, ErrorSize))
+	if(pSqlServer->Step(&End, pError, ErrorSize))
 	{
-		return false;
+		return true;
 	}
 	if(!End)
 	{
-		int Rank = pSqlServer->GetInt(1);
-		int Count = pSqlServer->GetInt(2);
+		int TRank = pSqlServer->GetInt(1); //
+		int TCount = pSqlServer->GetInt(2); //
+		int Rank = pSqlServer->GetInt(3); //
+		int Count = pSqlServer->GetInt(4); //
+		int RRank = pSqlServer->GetInt(5); //
+		int RCount = pSqlServer->GetInt(6); //
 		char aName[MAX_NAME_LENGTH];
-		pSqlServer->GetString(3, aName, sizeof(aName));
+		pSqlServer->GetString(7, aName, sizeof(aName));
 		pResult->m_MessageKind = CScorePlayerResult::ALL;
 		str_format(paMessages[0], sizeof(paMessages[0]),
-			"%d. %s Points: %d, requested by %s",
-			Rank, aName, Count, pData->m_aRequestingPlayer);
+			"%d. %s - Points: %d (%d. Fixed: %d, %d. Repeat: %d), requested by %s",
+			TRank, aName, TCount, Rank, Count, RRank, RCount, pData->m_aRequestingPlayer); //
 	}
-	else
-	{
-		str_format(paMessages[0], sizeof(paMessages[0]),
-			"%s has not collected any points so far", pData->m_aName);
-	}
-	return true;
 }
 
 bool CScoreWorker::ShowTopPoints(IDbConnection *pSqlServer, const ISqlData *pGameData, char *pError, int ErrorSize)
