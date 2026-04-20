@@ -3568,8 +3568,17 @@ void CServer::ConStatus(IConsole::IResult *pResult, void *pUser)
 			{
 				pClientPrefix = "0.7:";
 			}
-			str_format(aBuf, sizeof(aBuf), "id=%d addr=<{%s}> name='%s' client=%s%d secure=%s flags=%d%s%s",
-				i, pThis->ClientAddrString(i, true), pThis->m_aClients[i].m_aName, pClientPrefix, pThis->m_aClients[i].m_DDNetVersion,
+			
+			//Here! add
+			char aActualNameStr[128];
+			aActualNameStr[0] = '\0';
+			const char *pActualName = pThis->GameServer()->StatusActualName(i);
+			if(pActualName && pActualName[0] != '\0')
+			{
+				str_format(aActualNameStr, sizeof(aActualNameStr), " actual_name='%s'", pActualName);
+			}
+			str_format(aBuf, sizeof(aBuf), "id=%d addr=<{%s}> name='%s'%s client=%s%d secure=%s flags=%d%s%s",
+				i, pThis->ClientAddrString(i, true), pThis->m_aClients[i].m_aName, aActualNameStr, pClientPrefix, pThis->m_aClients[i].m_DDNetVersion,
 				pThis->m_NetServer.HasSecurityToken(i) ? "yes" : "no", pThis->m_aClients[i].m_Flags, aDnsblStr, aAuthStr);
 		}
 		else

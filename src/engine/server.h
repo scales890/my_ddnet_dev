@@ -398,6 +398,11 @@ public:
 	 * @param ClientId The client ID.
 	 */
 	virtual void OnUpdatePlayerServerInfo(CJsonWriter *pJsonWriter, int ClientId) = 0;
+
+	//Here! add
+	// Optional extra name field for server status output.
+	// Return empty string if no extra name should be shown.
+	virtual const char *StatusActualName(int ClientId) const = 0;
 };
 
 extern IGameServer *CreateGameServer();

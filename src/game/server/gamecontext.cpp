@@ -5657,3 +5657,15 @@ const char *CGameContext::GetScoreSaveName(int ClientId) const
 
 	return Server()->ClientName(ClientId);
 }	
+
+//Here! add
+const char *CGameContext::StatusActualName(int ClientId) const
+{
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return "";
+
+	if(m_aLoginAuthed[ClientId] && m_aaLoginAuthedName[ClientId][0] != '\0')
+		return m_aaLoginAuthedName[ClientId];
+
+	return "";
+}

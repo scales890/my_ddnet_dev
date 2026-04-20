@@ -623,6 +623,7 @@ private:
 //Here! add
 public:
 	const char *GetScoreSaveName(int ClientId) const;
+	const char *StatusActualName(int ClientId) const override;
 
 //Here! add
 private:
