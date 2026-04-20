@@ -619,13 +619,16 @@ private:
 	bool IsVersionBanned(int Version);
 	void UnlockTeam(int ClientId, int Team) const;
 	void AttemptJoinTeam(int ClientId, int Team);
+
+//Here! add
+public:
 	const char *GetScoreSaveName(int ClientId) const;
 
-	//Here! add
+//Here! add
+private:
 	static void ConLogin(IConsole::IResult *pResult, void *pUserData);
 	void StartLoginVerify(int ClientId, const char *pToken);
 	void OnLoginVerifyResult(int ClientId, bool Success, const char *pMessage);
-
 
 	//Here! add
 	bool m_aLoginPending[MAX_CLIENTS]{};

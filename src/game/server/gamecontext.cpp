@@ -5656,4 +5656,4 @@ const char *CGameContext::GetScoreSaveName(int ClientId) const
 		return m_aaLoginAuthedName[ClientId];
 
 	return Server()->ClientName(ClientId);
-}
+}	
