@@ -1171,12 +1171,61 @@ void CGameContext::OnTick()
 			m_apPlayers[i]->PostTick();
 
 			//Here! add
-			if(m_apLoginAuthResult[i] != nullptr && m_apLoginAuthResult[i]->m_Completed)
+			if(m_apLoginAuthHttpRequest[i] != nullptr && m_apLoginAuthHttpRequest[i]->Done())
 			{
-				const bool Success = m_apLoginAuthResult[i]->m_Success && m_apLoginAuthResult[i]->m_AuthSuccess;
-				char aMsg[128];
-				str_copy(aMsg, m_apLoginAuthResult[i]->m_aMessage, sizeof(aMsg));
-				m_apLoginAuthResult[i] = nullptr;
+				bool Success = false;
+				char aMsg[128] = "Login API request failed";
+				const auto pRequest = m_apLoginAuthHttpRequest[i];
+				if(pRequest->State() == EHttpState::DONE)
+				{
+					if(pRequest->StatusCode() == 200)
+					{
+						json_value *pJson = pRequest->ResultJson();
+						if(pJson != nullptr)
+						{
+							const json_value &Json = *pJson;
+							const json_value &Ok = Json["ok"];
+							const json_value &Matched = Json["matched"];
+							const json_value &AllowLogin = Json["allow_login"];
+							if(Ok.type == json_boolean && (bool)Ok && Matched.type == json_boolean)
+							{
+								// Prefer allow_login when present, fallback to matched for backward compatibility.
+								if(AllowLogin.type == json_boolean)
+									Success = (bool)AllowLogin;
+								else
+									Success = (bool)Matched;
+								if(!Success)
+									str_copy(aMsg, "Token or player name mismatch", sizeof(aMsg));
+								else
+									str_copy(aMsg, "OK", sizeof(aMsg));
+							}
+							else
+							{
+								str_copy(aMsg, "Login API response format invalid", sizeof(aMsg));
+							}
+							json_value_free(pJson);
+						}
+						else
+						{
+							str_copy(aMsg, "Login API returned non-JSON response", sizeof(aMsg));
+						}
+					}
+					else if(pRequest->StatusCode() == 401)
+					{
+						str_copy(aMsg, "Login API unauthorized (invalid server key)", sizeof(aMsg));
+					}
+					else if(pRequest->StatusCode() == 400)
+					{
+						str_copy(aMsg, "Login API bad request", sizeof(aMsg));
+					}
+					else
+					{
+						char aStatusMsg[64];
+						str_format(aStatusMsg, sizeof(aStatusMsg), "Login API HTTP %d", pRequest->StatusCode());
+						str_copy(aMsg, aStatusMsg, sizeof(aMsg));
+					}
+				}
+				m_apLoginAuthHttpRequest[i] = nullptr;
 				OnLoginVerifyResult(i, Success, aMsg);
 			}
 		}
@@ -1916,7 +1965,7 @@ void CGameContext::OnClientConnected(int ClientId, void *pData)
 	m_aLoginAuthed[ClientId] = LoginAuthed;
 	str_copy(m_aaLoginAuthedName[ClientId], aLoginAuthedName, sizeof(m_aaLoginAuthedName[ClientId]));
 	m_aLoginPending[ClientId] = false;
-	m_apLoginAuthResult[ClientId] = nullptr;
+	m_apLoginAuthHttpRequest[ClientId] = nullptr;
 	m_aLoginBurstWindowStartTick[ClientId] = 0;
 	m_aLoginBurstCount[ClientId] = 0;
 	m_aLoginBlockedUntilTick[ClientId] = 0;
@@ -1936,7 +1985,7 @@ void CGameContext::OnClientDrop(int ClientId, const char *pReason)
 	m_aLoginAuthed[ClientId] = false;
 	m_aaLoginAuthedName[ClientId][0] = '\0';
 	m_aLastLoginTryTick[ClientId] = 0;
-	m_apLoginAuthResult[ClientId] = nullptr;
+	m_apLoginAuthHttpRequest[ClientId] = nullptr;
 	m_aLoginBurstWindowStartTick[ClientId] = 0;
 	m_aLoginBurstCount[ClientId] = 0;
 	m_aLoginBlockedUntilTick[ClientId] = 0;
@@ -5602,14 +5651,38 @@ void CGameContext::StartLoginVerify(int ClientId, const char *pToken)
 
 	m_aLastLoginTryTick[ClientId] = TickNow;
 	m_aLoginPending[ClientId] = true;
-	m_apLoginAuthResult[ClientId] = std::make_shared<CLoginAuthResult>();
+	if(g_Config.m_SvLoginApiUrl[0] == '\0' || g_Config.m_SvLoginApiKey[0] == '\0')
+	{
+		m_aLoginPending[ClientId] = false;
+		SendChatTarget(ClientId, "Login API is not configured on this server.");
+		return;
+	}
 
-	auto pRequest = std::make_unique<CSqlLoginAuthRequest>(m_apLoginAuthResult[ClientId]);
-	pRequest->m_ClientId = ClientId;
-	str_copy(pRequest->m_aToken, pToken, sizeof(pRequest->m_aToken));
-	str_copy(pRequest->m_aRequestingPlayer, Server()->ClientName(ClientId), sizeof(pRequest->m_aRequestingPlayer));
+	IHttp *pHttp = Kernel()->RequestInterface<IHttp>();
+	if(pHttp == nullptr)
+	{
+		m_aLoginPending[ClientId] = false;
+		SendChatTarget(ClientId, "Login API is unavailable on this server.");
+		return;
+	}
 
-	((CServer *)Server())->DbPool()->Execute(CLoginAuthWorker::VerifyToken, std::move(pRequest), "login verify");
+	char aEscToken[256];
+	char aEscId[128];
+	EscapeJson(aEscToken, sizeof(aEscToken), pToken);
+	EscapeJson(aEscId, sizeof(aEscId), Server()->ClientName(ClientId));
+
+	char aBody[512];
+	str_format(aBody, sizeof(aBody),
+		"{\"token\":\"%s\",\"id\":\"%s\"}",
+		aEscToken, aEscId);
+
+	std::shared_ptr<CHttpRequest> pRequest(HttpPostJson(g_Config.m_SvLoginApiUrl, aBody).release());
+	pRequest->Header("Content-Type: application/json");
+	pRequest->HeaderString("X-Game-Server-Key", g_Config.m_SvLoginApiKey);
+	pRequest->LogProgress(HTTPLOG::NONE);
+	pRequest->Timeout(CTimeout{3000, 3000, 500, 3});
+	m_apLoginAuthHttpRequest[ClientId] = pRequest;
+	pHttp->Run(std::static_pointer_cast<IHttpRequest>(pRequest));
 }
 
 void CGameContext::OnLoginVerifyResult(int ClientId, bool Success, const char *pMessage)

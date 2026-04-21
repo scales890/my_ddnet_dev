@@ -10,6 +10,7 @@
 #include <base/types.h>
 
 #include <engine/console.h>
+#include <engine/shared/http.h>
 #include <engine/server.h>
 
 #include <generated/protocol.h>
@@ -23,9 +24,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-
-//Here! add
-#include "loginauthworker.h"
 
 /*
 	Tick
@@ -639,7 +637,7 @@ private:
 	int m_aLoginBurstWindowStartTick[MAX_CLIENTS]{};
 	int m_aLoginBurstCount[MAX_CLIENTS]{};
 	int m_aLoginBlockedUntilTick[MAX_CLIENTS]{};
-	std::shared_ptr<CLoginAuthResult> m_apLoginAuthResult[MAX_CLIENTS];
+	std::shared_ptr<CHttpRequest> m_apLoginAuthHttpRequest[MAX_CLIENTS];
 
 	enum
 	{
