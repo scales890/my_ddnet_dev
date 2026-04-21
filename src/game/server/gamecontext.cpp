@@ -5680,6 +5680,7 @@ void CGameContext::StartLoginVerify(int ClientId, const char *pToken)
 	pRequest->Header("Content-Type: application/json");
 	pRequest->HeaderString("X-Game-Server-Key", g_Config.m_SvLoginApiKey);
 	pRequest->LogProgress(HTTPLOG::NONE);
+	pRequest->AllowInsecureHttp(g_Config.m_SvLoginApiAllowInsecure != 0);
 	pRequest->Timeout(CTimeout{3000, 3000, 500, 3});
 	m_apLoginAuthHttpRequest[ClientId] = pRequest;
 	pHttp->Run(std::static_pointer_cast<IHttpRequest>(pRequest));

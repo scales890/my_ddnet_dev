@@ -122,6 +122,9 @@ class CHttpRequest : public IHttpRequest
 	HTTPLOG m_LogProgress = HTTPLOG::ALL;
 	IPRESOLVE m_IpResolve = IPRESOLVE::WHATEVER;
 
+	//Here! add
+	bool m_AllowInsecureHttp = false;
+
 	bool m_FailOnErrorStatus = true;
 
 	char m_aErr[256]; // 256 == CURL_ERROR_SIZE
@@ -168,6 +171,7 @@ public:
 	void MaxResponseSize(int64_t MaxResponseSize) { m_MaxResponseSize = MaxResponseSize; }
 	void LogProgress(HTTPLOG LogProgress) { m_LogProgress = LogProgress; }
 	void IpResolve(IPRESOLVE IpResolve) { m_IpResolve = IpResolve; }
+	void AllowInsecureHttp(bool AllowInsecureHttp) { m_AllowInsecureHttp = AllowInsecureHttp; }
 	void FailOnErrorStatus(bool FailOnErrorStatus) { m_FailOnErrorStatus = FailOnErrorStatus; }
 	// Download to memory only. Get the result via `Result*`.
 	void WriteToMemory()
