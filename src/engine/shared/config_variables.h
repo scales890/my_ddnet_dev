@@ -794,6 +794,8 @@ MACRO_CONFIG_INT(ClVideoRecorderFPS, cl_video_recorder_fps, 60, 1, 1000, CFGFLAG
 MACRO_CONFIG_STR(SvLoginApiUrl, sv_login_api_url, 256, "", CFGFLAG_SERVER, "Login verification API URL")
 MACRO_CONFIG_STR(SvLoginApiKey, sv_login_api_key, 128, "", CFGFLAG_SERVER | CFGFLAG_NONTEEHISTORIC, "Login verification API key")
 MACRO_CONFIG_INT(SvLoginApiAllowInsecure, sv_login_api_allow_insecure, 0, 0, 1, CFGFLAG_SERVER, "Allow /login API to use plain HTTP without enabling global http_allow_insecure")
+MACRO_CONFIG_INT(SvLoginRequireForChat, sv_login_require_for_chat, 0, 0, 1, CFGFLAG_SERVER, "Block spectator chat messages for players who are not logged in")
+MACRO_CONFIG_INT(SvLoginRequireForVote, sv_login_require_for_vote, 0, 0, 1, CFGFLAG_SERVER, "Block voting for spectators who are not logged in")
 MACRO_CONFIG_INT(SvLoginRateLimitWindow, sv_login_rate_limit_window, 10, 1, 3600, CFGFLAG_SERVER, "Time window in seconds for /login rate limiting")
 MACRO_CONFIG_INT(SvLoginRateLimitAttempts, sv_login_rate_limit_attempts, 5, 1, 1000, CFGFLAG_SERVER, "Maximum /login attempts allowed in the rate limit window")
 MACRO_CONFIG_INT(SvLoginRateLimitBlockMinutes, sv_login_rate_limit_block_minutes, 1, 1, 1440, CFGFLAG_SERVER, "How many minutes /login stays blocked after exceeding the rate limit")

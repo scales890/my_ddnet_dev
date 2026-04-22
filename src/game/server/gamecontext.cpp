@@ -2387,6 +2387,16 @@ void CGameContext::OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientId)
 void CGameContext::OnSayNetMessage(const CNetMsg_Cl_Say *pMsg, int ClientId, const CUnpacker *pUnpacker)
 {
 	CPlayer *pPlayer = m_apPlayers[ClientId];
+
+	//Here! add
+	if(g_Config.m_SvLoginRequireForChat &&
+		!m_aLoginAuthed[ClientId] &&
+		pMsg->m_pMessage[0] != '/')
+	{
+		SendChatTarget(ClientId, "You must /login before chatting as spectator.");
+		return;
+	}
+
 	bool Check = !pPlayer->m_NotEligibleForFinish && pPlayer->m_EligibleForFinishCheck + 10 * time_freq() >= time_get();
 	if(Check && str_comp(pMsg->m_pMessage, "xd sure chillerbot.png is lyfe") == 0 && pMsg->m_Team == 0)
 	{
@@ -2493,6 +2503,14 @@ void CGameContext::OnCallVoteNetMessage(const CNetMsg_Cl_CallVote *pMsg, int Cli
 {
 	if(RateLimitPlayerVote(ClientId) || m_VoteCloseTime)
 		return;
+
+	//Here! add
+	if(g_Config.m_SvLoginRequireForVote &&
+		!m_aLoginAuthed[ClientId])
+	{
+		SendChatTarget(ClientId, "You must /login before using votes as spectator.");
+		return;
+	}
 
 	m_apPlayers[ClientId]->UpdatePlaytime();
 
@@ -2772,6 +2790,14 @@ void CGameContext::OnVoteNetMessage(const CNetMsg_Cl_Vote *pMsg, int ClientId)
 {
 	if(!m_VoteCloseTime)
 		return;
+
+	//Here! add
+	if(g_Config.m_SvLoginRequireForVote &&
+		!m_aLoginAuthed[ClientId])
+	{
+		SendChatTarget(ClientId, "You must /login before voting as spectator.");
+		return;
+	}
 
 	CPlayer *pPlayer = m_apPlayers[ClientId];
 
