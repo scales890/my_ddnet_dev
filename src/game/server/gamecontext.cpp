@@ -2393,7 +2393,7 @@ void CGameContext::OnSayNetMessage(const CNetMsg_Cl_Say *pMsg, int ClientId, con
 		!m_aLoginAuthed[ClientId] &&
 		pMsg->m_pMessage[0] != '/')
 	{
-		SendChatTarget(ClientId, "You must /login before chatting as spectator.");
+		SendChatTarget(ClientId, "You must /login before chatting.");
 		return;
 	}
 
@@ -2508,7 +2508,7 @@ void CGameContext::OnCallVoteNetMessage(const CNetMsg_Cl_CallVote *pMsg, int Cli
 	if(g_Config.m_SvLoginRequireForVote &&
 		!m_aLoginAuthed[ClientId])
 	{
-		SendChatTarget(ClientId, "You must /login before using votes as spectator.");
+		SendChatTarget(ClientId, "You must /login before using votes.");
 		return;
 	}
 
@@ -2795,7 +2795,7 @@ void CGameContext::OnVoteNetMessage(const CNetMsg_Cl_Vote *pMsg, int ClientId)
 	if(g_Config.m_SvLoginRequireForVote &&
 		!m_aLoginAuthed[ClientId])
 	{
-		SendChatTarget(ClientId, "You must /login before voting as spectator.");
+		SendChatTarget(ClientId, "You must /login before voting.");
 		return;
 	}
 
@@ -3552,6 +3552,56 @@ void CGameContext::ConSay(IConsole::IResult *pResult, void *pUserData)
 	pSelf->SendChat(-1, TEAM_ALL, pResult->GetString(0));
 }
 
+//Here! add
+void CGameContext::ConForceLoginLogout(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	if(pResult->NumArguments() < 2)
+	{
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "login", "Usage: force_login_logout <game_id> <dummy_id>");
+		return;
+	}
+
+	const char *pGameId = pResult->GetString(0);
+	const char *pDummyId = pResult->GetString(1);
+	int Affected = 0;
+
+	for(int i = 0; i < MAX_CLIENTS; i++)
+	{
+		if(!pSelf->m_apPlayers[i] || !pSelf->m_aLoginAuthed[i])
+			continue;
+		if(pSelf->m_aaLoginAuthedName[i][0] == '\0')
+			continue;
+		if(str_comp(pSelf->m_aaLoginAuthedName[i], pGameId) != 0 && str_comp(pSelf->m_aaLoginAuthedName[i], pDummyId) != 0)
+			continue;
+
+		dbg_msg("login", "force_login_logout client=%d saved_name='%s'", i, pSelf->m_aaLoginAuthedName[i]);
+
+		pSelf->m_aLoginAuthed[i] = false;
+		pSelf->m_aaLoginAuthedName[i][0] = '\0';
+		pSelf->m_aLoginPending[i] = false;
+		pSelf->m_apLoginAuthHttpRequest[i] = nullptr;
+		pSelf->m_aLastLoginTryTick[i] = 0;
+		pSelf->m_aLoginBurstWindowStartTick[i] = 0;
+		pSelf->m_aLoginBurstCount[i] = 0;
+		pSelf->m_aLoginBlockedUntilTick[i] = 0;
+
+		if(pSelf->m_apPlayers[i]->GetTeam() != TEAM_SPECTATORS)
+		{
+			pSelf->m_apPlayers[i]->Pause(CPlayer::PAUSE_NONE, false);
+			pSelf->m_apPlayers[i]->m_TeamChangeTick = pSelf->Server()->Tick();
+			pSelf->m_pController->DoTeamChange(pSelf->m_apPlayers[i], TEAM_SPECTATORS);
+			pSelf->m_apPlayers[i]->Pause(CPlayer::PAUSE_NONE, true);
+		}
+
+		Affected++;
+	}
+
+	char aBuf[128];
+	str_format(aBuf, sizeof(aBuf), "force_login_logout affected %d client(s)", Affected);
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "login", aBuf);
+}
+
 void CGameContext::ConSetTeam(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
@@ -4058,6 +4108,10 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("mod_alert", "v[id] r[message]", CFGFLAG_SERVER, ConModAlert, this, "Send a moderator alert message to player");
 	Console()->Register("broadcast", "r[message]", CFGFLAG_SERVER, ConBroadcast, this, "Broadcast message");
 	Console()->Register("say", "r[message]", CFGFLAG_SERVER, ConSay, this, "Say in chat");
+	
+	//Here! add
+	Console()->Register("force_login_logout", "s[game_id] s[dummy_id]", CFGFLAG_SERVER, ConForceLoginLogout, this, "Log out players whose saved login name matches game_id or dummy_id; move them to spectators");
+	
 	Console()->Register("set_team", "i[id] i[team-id] ?i[delay in minutes]", CFGFLAG_SERVER, ConSetTeam, this, "Set team for a player (spectators = -1, game = 0)");
 	Console()->Register("set_team_all", "i[team-id]", CFGFLAG_SERVER, ConSetTeamAll, this, "Set team for all players (spectators = -1, game = 0)");
 	Console()->Register("hot_reload", "", CFGFLAG_SERVER | CMDFLAG_TEST, ConHotReload, this, "Reload the map while preserving the state of tees and teams");
