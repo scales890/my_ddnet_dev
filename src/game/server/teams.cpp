@@ -760,7 +760,7 @@ void CGameTeams::OnFinish(CPlayer *pPlayer, int TimeTicks, const char *pTimestam
 	// Note that the "finished in" message is parsed by the client
 	str_format(aBuf, sizeof(aBuf),
 		"%s finished in: %d minute(s) %5.2f second(s)",
-		Server()->ClientName(ClientId), (int)Time / 60,
+		GameServer()->GetScoreSaveName(ClientId), (int)Time / 60,
 		Time - ((int)Time / 60 * 60));
 	if(g_Config.m_SvHideScore)
 		GameServer()->SendChatTarget(ClientId, aBuf, CGameContext::FLAG_SIX);

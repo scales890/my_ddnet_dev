@@ -608,8 +608,8 @@ bool CScoreWorker::SaveScore(IDbConnection *pSqlServer, const ISqlData *pGameDat
 					return false;
 				}
 				str_format(paMessages[0], sizeof(paMessages[0]),
-					"You earned %d point%s for finishing this map!",
-					Points, Points == 1 ? "" : "s");
+					"You (%s) earned %d point%s for finishing this map!",
+					pData->m_aName, Points, Points == 1 ? "" : "s");
 			}
 		}
 		//Here! add
@@ -635,8 +635,8 @@ bool CScoreWorker::SaveScore(IDbConnection *pSqlServer, const ISqlData *pGameDat
 					return false;
 				}
 				str_format(paMessages[0], sizeof(paMessages[0]),
-					"You earned %d repeat point%s for finishing this map again!",
-					Points, Points == 1 ? "" : "s");
+					"You (%s) earned %d repeat point%s for finishing this map again!",
+					pData->m_aName, Points, Points == 1 ? "" : "s");
 			}
 		}
 	}
