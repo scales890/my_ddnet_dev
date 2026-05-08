@@ -2861,6 +2861,15 @@ void CGameContext::OnSetTeamNetMessage(const CNetMsg_Cl_SetTeam *pMsg, int Clien
 		return;
 	}
 
+	// Require login before leaving spectator mode and joining the game.
+	if(pPlayer->GetTeam() == TEAM_SPECTATORS &&
+		pMsg->m_Team != TEAM_SPECTATORS &&
+		!m_aLoginAuthed[ClientId])
+	{
+		SendChatTarget(ClientId, "You must /login before joining the game.");
+		return;
+	}
+
 	// Switch team on given client and kill/respawn them
 	char aTeamJoinError[512];
 	if(m_pController->CanJoinTeam(pMsg->m_Team, ClientId, aTeamJoinError, sizeof(aTeamJoinError)))
