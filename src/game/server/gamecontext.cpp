@@ -2388,13 +2388,26 @@ void CGameContext::OnSayNetMessage(const CNetMsg_Cl_Say *pMsg, int ClientId, con
 {
 	CPlayer *pPlayer = m_apPlayers[ClientId];
 
-	//Here! add
-	if(g_Config.m_SvLoginRequireForChat &&
-		!m_aLoginAuthed[ClientId] &&
-		pMsg->m_pMessage[0] != '/')
+	if(!m_aLoginAuthed[ClientId] && pMsg->m_pMessage[0] != '/')
 	{
-		SendChatTarget(ClientId, "You must /login before chatting.");
-		return;
+		const int LoginChatMode = g_Config.m_SvLoginRequireForChat;
+		if(LoginChatMode == 1)
+		{
+			SendChatTarget(ClientId, "You must /login before chatting.");
+			return;
+		}
+		else if(LoginChatMode >= 2)
+		{
+			const int IntervalSec = LoginChatMode;
+			if(pPlayer->m_LastChat && pPlayer->m_LastChat + Server()->TickSpeed() * IntervalSec > Server()->Tick())
+			{
+				const int SecondsLeft = (int)((pPlayer->m_LastChat + Server()->TickSpeed() * IntervalSec - Server()->Tick() + Server()->TickSpeed() - 1) / Server()->TickSpeed());
+				char aBuf[128];
+				str_format(aBuf, sizeof(aBuf), "Please wait %d seconds before chatting again, or use /login.", SecondsLeft);
+				SendChatTarget(ClientId, aBuf);
+				return;
+			}
+		}
 	}
 
 	bool Check = !pPlayer->m_NotEligibleForFinish && pPlayer->m_EligibleForFinishCheck + 10 * time_freq() >= time_get();
@@ -2496,6 +2509,8 @@ void CGameContext::OnSayNetMessage(const CNetMsg_Cl_Say *pMsg, int ClientId, con
 		char aCensoredMessage[256];
 		CensorMessage(aCensoredMessage, pMsg->m_pMessage, sizeof(aCensoredMessage));
 		SendChat(ClientId, Team, aCensoredMessage, ClientId);
+		if(!m_aLoginAuthed[ClientId] && g_Config.m_SvLoginRequireForChat >= 2)
+			pPlayer->m_LastChat = Server()->Tick();
 	}
 }
 
