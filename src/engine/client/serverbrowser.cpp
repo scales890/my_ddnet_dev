@@ -486,7 +486,7 @@ void CServerBrowser::Filter()
 			{
 				Filtered = true;
 				// match against player country
-				for(int p = 0; p < minimum(Info.m_NumClients, (int)MAX_CLIENTS); p++)
+				for(int p = 0; p < std::min(Info.m_NumClients, (int)MAX_CLIENTS); p++)
 				{
 					if(Info.m_aClients[p].m_Country == g_Config.m_BrFilterCountryIndex)
 					{
@@ -527,7 +527,7 @@ void CServerBrowser::Filter()
 					}
 
 					// match against players
-					for(int p = 0; p < minimum(Info.m_NumClients, (int)MAX_CLIENTS); p++)
+					for(int p = 0; p < std::min(Info.m_NumClients, (int)MAX_CLIENTS); p++)
 					{
 						if(MatchesFn(Info.m_aClients[p].m_aName, aFilterStrTrimmed) ||
 							MatchesFn(Info.m_aClients[p].m_aClan, aFilterStrTrimmed))
@@ -865,7 +865,7 @@ CServerBrowser::CServerEntry *CServerBrowser::Add(const NETADDR *pAddrs, int Num
 	pEntry->m_Info.m_HasRank = CServerInfo::RANK_UNAVAILABLE;
 	ServerBrowserFormatAddresses(pEntry->m_Info.m_aAddress, sizeof(pEntry->m_Info.m_aAddress), pEntry->m_Info.m_aAddresses, pEntry->m_Info.m_NumAddresses);
 	UpdateServerCommunity(&pEntry->m_Info);
-	str_copy(pEntry->m_Info.m_aName, pEntry->m_Info.m_aAddress, sizeof(pEntry->m_Info.m_aName));
+	str_copy(pEntry->m_Info.m_aName, pEntry->m_Info.m_aAddress);
 
 	// check if it's a favorite
 	pEntry->m_Info.m_Favorite = m_pFavorites->IsFavorite(pEntry->m_Info.m_aAddresses, pEntry->m_Info.m_NumAddresses);
@@ -903,7 +903,7 @@ CServerBrowser::CServerEntry *CServerBrowser::ReplaceEntry(CServerEntry *pEntry,
 	pEntry->m_Info.m_HasRank = CServerInfo::RANK_UNAVAILABLE;
 	ServerBrowserFormatAddresses(pEntry->m_Info.m_aAddress, sizeof(pEntry->m_Info.m_aAddress), pEntry->m_Info.m_aAddresses, pEntry->m_Info.m_NumAddresses);
 	UpdateServerCommunity(&pEntry->m_Info);
-	str_copy(pEntry->m_Info.m_aName, pEntry->m_Info.m_aAddress, sizeof(pEntry->m_Info.m_aName));
+	str_copy(pEntry->m_Info.m_aName, pEntry->m_Info.m_aAddress);
 
 	pEntry->m_Info.m_Favorite = m_pFavorites->IsFavorite(pEntry->m_Info.m_aAddresses, pEntry->m_Info.m_NumAddresses);
 	pEntry->m_Info.m_FavoriteAllowPing = m_pFavorites->IsPingAllowed(pEntry->m_Info.m_aAddresses, pEntry->m_Info.m_NumAddresses);
@@ -984,7 +984,7 @@ void CServerBrowser::OnServerInfoUpdate(const NETADDR &Addr, int Token, const CS
 	if(m_ServerlistType == IServerBrowser::TYPE_LAN)
 	{
 		SetInfo(pEntry, *pInfo);
-		pEntry->m_Info.m_Latency = minimum(static_cast<int>((time_get() - m_BroadcastTime) * 1000 / time_freq()), 999);
+		pEntry->m_Info.m_Latency = std::min(static_cast<int>((time_get() - m_BroadcastTime) * 1000 / time_freq()), 999);
 	}
 	else if(pEntry->m_RequestTime > 0)
 	{
@@ -993,7 +993,7 @@ void CServerBrowser::OnServerInfoUpdate(const NETADDR &Addr, int Token, const CS
 			SetInfo(pEntry, *pInfo);
 		}
 
-		int Latency = minimum(static_cast<int>((time_get() - pEntry->m_RequestTime) * 1000 / time_freq()), 999);
+		int Latency = std::min(static_cast<int>((time_get() - pEntry->m_RequestTime) * 1000 / time_freq()), 999);
 		if(!pEntry->m_RequestIgnoreInfo)
 		{
 			pEntry->m_Info.m_Latency = Latency;
@@ -1163,7 +1163,7 @@ void CServerBrowser::RequestCurrentServerWithRandomToken(const NETADDR &Addr, in
 
 void CServerBrowser::SetCurrentServerPing(const NETADDR &Addr, int Ping)
 {
-	SetLatency(Addr, minimum(Ping, 999));
+	SetLatency(Addr, std::min(Ping, 999));
 }
 
 void CServerBrowser::UpdateFromHttp()
@@ -1413,7 +1413,7 @@ void CServerBrowser::LoadDDNetInfoJson()
 	json_value_free(m_pDDNetInfo);
 	json_settings JsonSettings{};
 	char aError[256];
-	m_pDDNetInfo = json_parse_ex(&JsonSettings, static_cast<json_char *>(pBuf), Length, aError);
+	m_pDDNetInfo = JsonParseEx(&JsonSettings, static_cast<json_char *>(pBuf), Length, aError);
 	free(pBuf);
 
 	if(m_pDDNetInfo == nullptr)
@@ -1464,6 +1464,11 @@ bool CServerBrowser::ParseCommunityServers(CCommunity *pCommunity, const json_va
 		if(Types.u.object.length == 0)
 			continue;
 
+		if(str_has_cc(Name.u.string.ptr))
+		{
+			log_error("serverbrowser", "invalid community country name (ServerIndex=%u)", ServerIndex);
+			return false;
+		}
 		pCommunity->m_vCountries.emplace_back(Name.u.string.ptr, FlagId.u.integer);
 		CCommunityCountry *pCountry = &pCommunity->m_vCountries.back();
 
@@ -1665,10 +1670,10 @@ void CServerBrowser::UpdateServerFriends(CServerInfo *pInfo) const
 {
 	pInfo->m_FriendState = IFriends::FRIEND_NO;
 	pInfo->m_FriendNum = 0;
-	for(int ClientIndex = 0; ClientIndex < minimum(pInfo->m_NumReceivedClients, (int)MAX_CLIENTS); ClientIndex++)
+	for(int ClientIndex = 0; ClientIndex < std::min(pInfo->m_NumReceivedClients, (int)MAX_CLIENTS); ClientIndex++)
 	{
 		pInfo->m_aClients[ClientIndex].m_FriendState = m_pFriends->GetFriendState(pInfo->m_aClients[ClientIndex].m_aName, pInfo->m_aClients[ClientIndex].m_aClan);
-		pInfo->m_FriendState = maximum(pInfo->m_FriendState, pInfo->m_aClients[ClientIndex].m_FriendState);
+		pInfo->m_FriendState = std::max(pInfo->m_FriendState, pInfo->m_aClients[ClientIndex].m_FriendState);
 		if(pInfo->m_aClients[ClientIndex].m_FriendState != IFriends::FRIEND_NO)
 			pInfo->m_FriendNum++;
 	}
@@ -1851,7 +1856,6 @@ std::vector<const CCommunity *> CServerBrowser::CurrentCommunities() const
 
 unsigned CServerBrowser::CurrentCommunitiesHash() const
 {
-	std::vector<const CCommunity *> vpCommunities = CurrentCommunities();
 	unsigned Hash = 5381;
 	for(const CCommunity *pCommunity : CurrentCommunities())
 	{

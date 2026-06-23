@@ -113,7 +113,9 @@ public:
 					Result = SendPackMsgOne(pMsg, Flags, i);
 		}
 		else if(IsSixup(ClientId))
+		{
 			Result = SendPackMsgOne(pMsg, Flags, ClientId);
+		}
 
 		return Result;
 	}
@@ -236,7 +238,7 @@ public:
 	virtual void SetClientScore(int ClientId, std::optional<int> Score) = 0;
 	virtual void SetClientFlags(int ClientId, int Flags) = 0;
 
-	virtual int SnapNewId() = 0;
+	virtual std::optional<int> SnapNewId() = 0;
 	virtual void SnapFreeId(int Id) = 0;
 	virtual bool SnapNewItem(int Type, int Id, rust::Slice<const int32_t> Data) = 0;
 
