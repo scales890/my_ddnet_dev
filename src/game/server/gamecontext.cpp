@@ -1164,7 +1164,7 @@ void CGameContext::OnTick()
 	CheckPureTuning();
 
 	if(m_pController && MovingFreezeQuadsMapEnabled())
-		m_Collision.SetEnvelopeClock(m_pController->m_RoundStartTick, Server()->Tick(), Server()->TickSpeed());
+		m_Collision.SetEnvelopeClock(m_pController->RoundStartTick(), Server()->Tick(), Server()->TickSpeed());
 
 	if(m_TeeHistorianActive)
 	{
@@ -3649,7 +3649,7 @@ void CGameContext::ConForceLoginLogout(IConsole::IResult *pResult, void *pUserDa
 		{
 			pSelf->m_apPlayers[i]->Pause(CPlayer::PAUSE_NONE, false);
 			pSelf->m_apPlayers[i]->m_TeamChangeTick = pSelf->Server()->Tick();
-			pSelf->m_pController->DoTeamChange(pSelf->m_apPlayers[i], TEAM_SPECTATORS);
+			pSelf->m_pController->DoTeamChange(pSelf->m_apPlayers[i], TEAM_SPECTATORS, false);
 			pSelf->m_apPlayers[i]->Pause(CPlayer::PAUSE_NONE, true);
 		}
 

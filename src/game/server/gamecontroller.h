@@ -139,6 +139,8 @@ public:
 	virtual void EndRound();
 	void ChangeMap(const char *pToMap);
 
+	int RoundStartTick() const { return m_RoundStartTick; }
+
 	/*
 
 	*/
