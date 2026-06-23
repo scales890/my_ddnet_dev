@@ -2294,6 +2294,8 @@ set_src(GAME_SHARED GLOB src/game
   alloc.h
   collision.cpp
   collision.h
+  envelope_eval.cpp
+  envelope_eval.h
   gamecore.cpp
   gamecore.h
   layers.cpp
@@ -2310,6 +2312,8 @@ set_src(GAME_SHARED GLOB src/game
   mapitems_ex_types.h
   prng.cpp
   prng.h
+  quad_freeze.cpp
+  quad_freeze.h
   race_state.h
   team_state.h
   teamscore.cpp
@@ -3262,6 +3266,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     os_test.cpp
     packer_test.cpp
     prng_test.cpp
+    quad_freeze_test.cpp
     replace_words_test.cpp
     score_test.cpp
     secure_random_test.cpp

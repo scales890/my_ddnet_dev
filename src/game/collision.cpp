@@ -178,7 +178,7 @@ void CCollision::InitMovingFreezeQuads(IMap *pMap, bool Enabled)
 	m_pEnvelopePoints = std::make_unique<CMapBasedEnvelopePointAccess>(pMap);
 	BuildMovingFreezeQuadCache(pMap);
 	if(!m_vMovingFreezeQuads.empty())
-		log_info("moving_freeze", "loaded %zu moving freeze quads", m_vMovingFreezeQuads.size());
+		log_info("kog_qquads", "loaded %zu moving freeze quads", m_vMovingFreezeQuads.size());
 }
 
 void CCollision::BuildMovingFreezeQuadCache(IMap *pMap)
@@ -193,11 +193,11 @@ void CCollision::BuildMovingFreezeQuadCache(IMap *pMap)
 		const CMapItemGroup *pGroup = static_cast<CMapItemGroup *>(pMap->GetItem(GroupsStart + GroupIndex));
 		for(int LayerIndex = 0; LayerIndex < pGroup->m_NumLayers; LayerIndex++)
 		{
-			const CMapItemLayer *pLayer = static_cast<CMapItemLayer *>(pMap->GetItem(LayersStart + pGroup->m_StartLayer + LayerIndex));
+			const CMapItemLayer *pLayer = reinterpret_cast<const CMapItemLayer *>(pMap->GetItem(LayersStart + pGroup->m_StartLayer + LayerIndex));
 			if(pLayer->m_Type != LAYERTYPE_QUADS)
 				continue;
 
-			const CMapItemLayerQuads *pQuadLayer = static_cast<const CMapItemLayerQuads *>(pLayer);
+			const CMapItemLayerQuads *pQuadLayer = reinterpret_cast<const CMapItemLayerQuads *>(pLayer);
 			if(pQuadLayer->m_NumQuads <= 0)
 				continue;
 
