@@ -49,12 +49,14 @@ void GetAnimatedQuadCorners(const CQuad &Quad, IMap *pMap, CMapBasedEnvelopePoin
 	}
 
 	const CPoint &Center = Quad.m_aPoints[4];
-	for(int i = 0; i < 4; i++)
+	// Map stores quad corners as 0,1,2,3 but the rendered/collision polygon is 0,1,3,2.
+	static const int s_aCornerIndex[4] = {0, 1, 3, 2};
+	for(int j = 0; j < 4; j++)
 	{
-		CPoint Point = Quad.m_aPoints[i];
+		CPoint Point = Quad.m_aPoints[s_aCornerIndex[j]];
 		if(Rotation != 0.0f)
 			RotateQuadPoint(Center, Point, Rotation);
-		aCorners[i] = vec2(fx2f(Point.x), fx2f(Point.y)) + Offset;
+		aCorners[j] = vec2(fx2f(Point.x), fx2f(Point.y)) + Offset;
 	}
 }
 
@@ -77,12 +79,14 @@ bool PointInQuad(vec2 Point, const vec2 aCorners[4])
 
 bool BoxOverlapsQuad(vec2 Center, vec2 HalfSize, const vec2 aCorners[4])
 {
-	const vec2 aBoxPoints[5] = {
+	if(PointInQuad(Center, aCorners))
+		return true;
+
+	const vec2 aBoxPoints[4] = {
 		Center + vec2(-HalfSize.x, -HalfSize.y),
 		Center + vec2(HalfSize.x, -HalfSize.y),
 		Center + vec2(HalfSize.x, HalfSize.y),
 		Center + vec2(-HalfSize.x, HalfSize.y),
-		Center,
 	};
 
 	for(const vec2 &Point : aBoxPoints)
