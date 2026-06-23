@@ -132,6 +132,7 @@ class CGameContext : public IGameServer
 	ASYNCIO *m_pTeeHistorianFile;
 	CUuid m_GameUuid;
 	CMapBugs m_MapBugs;
+	bool m_MovingFreezeQuadsMapEnabled;
 	CPrng m_Prng;
 
 	bool m_Resetting;
@@ -211,6 +212,7 @@ public:
 	IMap *Map() override { return m_pMap.get(); }
 	const IMap *Map() const override { return m_pMap.get(); }
 	CCollision *Collision() { return &m_Collision; }
+	bool MovingFreezeQuadsMapEnabled() const { return m_MovingFreezeQuadsMapEnabled; }
 	CTuningParams *GlobalTuning() { return &m_aTuningList[0]; }
 	CTuningParams *TuningList() { return m_aTuningList; }
 	IAntibot *Antibot() { return m_pAntibot; }

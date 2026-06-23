@@ -1,0 +1,24 @@
+#ifndef GAME_QUAD_FREEZE_H
+#define GAME_QUAD_FREEZE_H
+
+#include <base/vmath.h>
+
+#include <game/envelope_eval.h>
+#include <game/mapitems.h>
+
+#include <chrono>
+#include <vector>
+
+class IMap;
+
+bool IsMovingFreezeQuadCandidate(const CQuad &Quad);
+
+void GetAnimatedQuadCorners(const CQuad &Quad, IMap *pMap, CMapBasedEnvelopePointAccess &EnvelopePoints, std::chrono::nanoseconds EnvelopeTime, vec2 aCorners[4]);
+
+bool PointInQuad(vec2 Point, const vec2 aCorners[4]);
+
+bool BoxOverlapsQuad(vec2 Center, vec2 HalfSize, const vec2 aCorners[4]);
+
+std::chrono::nanoseconds EnvelopeTimeFromTick(int CurrentTick, int RoundStartTick, int TickSpeed, double IntraTick = 0.0);
+
+#endif

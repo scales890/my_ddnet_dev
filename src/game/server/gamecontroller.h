@@ -146,6 +146,15 @@ public:
 
 	virtual void Snap(int SnappingClient);
 
+	int SnapEnvelopeRoundStartTick(int SnappingClient) const;
+	void UpdatePlayerEnvelopeRoundStart(int ClientId);
+	void OnPlayerEnvelopeRaceStart(int ClientId);
+	void ClearPlayerEnvelopeRoundStart(int ClientId);
+
+private:
+	void TickEnvelopeSync();
+
+public:
 	/**
 	 * Sets the score value that will be shown in the scoreboard.
 	 *

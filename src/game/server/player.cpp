@@ -90,6 +90,8 @@ void CPlayer::Reset()
 	m_FirstPacket = true;
 
 	m_SendVoteIndex = -1;
+	m_EnvelopeRoundStartTick = -1;
+	m_EnvelopeLastResyncTick = -1;
 
 	if(g_Config.m_Events)
 	{

@@ -138,6 +138,7 @@ CGameContext::CGameContext(bool Resetting) :
 
 	m_aDeleteTempfile[0] = 0;
 	m_TeeHistorianActive = false;
+	m_MovingFreezeQuadsMapEnabled = false;
 }
 
 CGameContext::~CGameContext()
@@ -1161,6 +1162,9 @@ void CGameContext::OnTick()
 {
 	// check tuning
 	CheckPureTuning();
+
+	if(m_pController)
+		m_Collision.SetEnvelopeClock(m_pController->m_RoundStartTick, Server()->Tick(), Server()->TickSpeed());
 
 	if(m_TeeHistorianActive)
 	{
@@ -4472,7 +4476,11 @@ void CGameContext::OnInit(const void *pPersistentData)
 
 	Console()->ExecuteFile(g_Config.m_SvResetFile, IConsole::CLIENT_ID_UNSPECIFIED);
 
+	g_Config.m_SvMovingFreezeQuads = 0;
 	LoadMapSettings();
+	m_MovingFreezeQuadsMapEnabled = g_Config.m_SvMovingFreezeQuads != 0;
+
+	m_Collision.InitMovingFreezeQuads(Map(), m_MovingFreezeQuadsMapEnabled);
 
 	m_pConfigManager->SetGameSettingsReadOnly(true);
 

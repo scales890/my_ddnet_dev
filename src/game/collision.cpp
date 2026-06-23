@@ -7,13 +7,18 @@
 #include <base/mem.h>
 #include <base/vmath.h>
 
+#include <base/log.h>
+
 #include <engine/map.h>
 #include <engine/shared/config.h>
 
 #include <game/collision.h>
+#include <game/envelope_eval.h>
 #include <game/layers.h>
 #include <game/mapitems.h>
+#include <game/quad_freeze.h>
 
+#include <chrono>
 #include <cmath>
 
 vec2 ClampVel(int MoveRestriction, vec2 Vel)
@@ -40,6 +45,8 @@ vec2 ClampVel(int MoveRestriction, vec2 Vel)
 CCollision::CCollision()
 {
 	m_pDoor = nullptr;
+	m_pMapForEnvelopes = nullptr;
+	m_EnvelopeTime = std::chrono::nanoseconds::zero();
 	Unload();
 }
 
@@ -153,8 +160,109 @@ void CCollision::Init(class CLayers *pLayers)
 	}
 }
 
+void CCollision::UnloadMovingFreezeQuads()
+{
+	m_vMovingFreezeQuads.clear();
+	m_pEnvelopePoints.reset();
+	m_pMapForEnvelopes = nullptr;
+	m_EnvelopeTime = std::chrono::nanoseconds::zero();
+}
+
+void CCollision::InitMovingFreezeQuads(IMap *pMap, bool Enabled)
+{
+	UnloadMovingFreezeQuads();
+	if(!Enabled || !pMap)
+		return;
+
+	m_pMapForEnvelopes = pMap;
+	m_pEnvelopePoints = std::make_unique<CMapBasedEnvelopePointAccess>(pMap);
+	BuildMovingFreezeQuadCache(pMap);
+	if(!m_vMovingFreezeQuads.empty())
+		log_info("moving_freeze", "loaded %zu moving freeze quads", m_vMovingFreezeQuads.size());
+}
+
+void CCollision::BuildMovingFreezeQuadCache(IMap *pMap)
+{
+	int GroupsStart, GroupsNum;
+	pMap->GetType(MAPITEMTYPE_GROUP, &GroupsStart, &GroupsNum);
+	int LayersStart, LayersNum;
+	pMap->GetType(MAPITEMTYPE_LAYER, &LayersStart, &LayersNum);
+
+	for(int GroupIndex = 0; GroupIndex < GroupsNum; GroupIndex++)
+	{
+		const CMapItemGroup *pGroup = static_cast<CMapItemGroup *>(pMap->GetItem(GroupsStart + GroupIndex));
+		for(int LayerIndex = 0; LayerIndex < pGroup->m_NumLayers; LayerIndex++)
+		{
+			const CMapItemLayer *pLayer = static_cast<CMapItemLayer *>(pMap->GetItem(LayersStart + pGroup->m_StartLayer + LayerIndex));
+			if(pLayer->m_Type != LAYERTYPE_QUADS)
+				continue;
+
+			const CMapItemLayerQuads *pQuadLayer = static_cast<const CMapItemLayerQuads *>(pLayer);
+			if(pQuadLayer->m_NumQuads <= 0)
+				continue;
+
+			const int DataSize = pMap->GetDataSize(pQuadLayer->m_Data);
+			if(DataSize / (int)sizeof(CQuad) < pQuadLayer->m_NumQuads)
+				continue;
+
+			const CQuad *pQuads = static_cast<const CQuad *>(pMap->GetDataSwapped(pQuadLayer->m_Data));
+			for(int QuadIndex = 0; QuadIndex < pQuadLayer->m_NumQuads; QuadIndex++)
+			{
+				if(IsMovingFreezeQuadCandidate(pQuads[QuadIndex]))
+					m_vMovingFreezeQuads.push_back({&pQuads[QuadIndex]});
+			}
+		}
+	}
+}
+
+void CCollision::SetEnvelopeClock(int RoundStartTick, int CurrentTick, int TickSpeed, double IntraTick)
+{
+	m_EnvelopeTime = EnvelopeTimeFromTick(CurrentTick, RoundStartTick, TickSpeed, IntraTick);
+}
+
+bool CCollision::TestMovingFreezeAt(vec2 Pos, vec2 BoxSize, std::chrono::nanoseconds EnvelopeTime) const
+{
+	if(m_vMovingFreezeQuads.empty() || !m_pEnvelopePoints || !m_pMapForEnvelopes)
+		return false;
+
+	const vec2 HalfSize = BoxSize * 0.5f;
+	vec2 aCorners[4];
+	for(const CMovingFreezeQuad &FreezeQuad : m_vMovingFreezeQuads)
+	{
+		GetAnimatedQuadCorners(*FreezeQuad.m_pQuad, m_pMapForEnvelopes, *m_pEnvelopePoints, EnvelopeTime, aCorners);
+		if(BoxOverlapsQuad(Pos, HalfSize, aCorners))
+			return true;
+	}
+	return false;
+}
+
+bool CCollision::IntersectMovingFreeze(vec2 PrevPos, vec2 CurPos, vec2 BoxSize) const
+{
+	if(m_vMovingFreezeQuads.empty())
+		return false;
+
+	const vec2 Delta = CurPos - PrevPos;
+	const float Distance = length(Delta);
+	const int Steps = std::max(1, (int)(Distance / 4.0f) + 1);
+	for(int Step = 0; Step <= Steps; Step++)
+	{
+		const float Fraction = Step / (float)Steps;
+		const vec2 Pos = mix(PrevPos, CurPos, Fraction);
+		if(TestMovingFreezeAt(Pos, BoxSize, m_EnvelopeTime))
+			return true;
+	}
+	return false;
+}
+
+bool CCollision::PointInMovingFreeze(vec2 Pos, vec2 BoxSize) const
+{
+	return TestMovingFreezeAt(Pos, BoxSize, m_EnvelopeTime);
+}
+
 void CCollision::Unload()
 {
+	UnloadMovingFreezeQuads();
+
 	m_pTiles = nullptr;
 	m_Width = 0;
 	m_Height = 0;

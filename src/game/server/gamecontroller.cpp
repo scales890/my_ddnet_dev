@@ -21,6 +21,14 @@
 #include <game/server/score.h>
 #include <game/teamscore.h>
 
+namespace
+{
+int EnvelopeLagTicks(IServer *pServer, int LatencyMs)
+{
+	return (LatencyMs * pServer->TickSpeed() + 500) / 1000;
+}
+} // namespace
+
 IGameController::IGameController(class CGameContext *pGameServer) :
 	m_Teams(pGameServer), m_pLoadBestTimeResult(nullptr)
 {
@@ -593,6 +601,89 @@ void IGameController::Tick()
 	}
 
 	DoActivityCheck();
+	TickEnvelopeSync();
+}
+
+int IGameController::SnapEnvelopeRoundStartTick(int SnappingClient) const
+{
+	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingFreezeQuads())
+		return m_RoundStartTick;
+
+	if(SnappingClient < 0)
+		return m_RoundStartTick;
+
+	CPlayer *pPlayer = SnappingClient != SERVER_DEMO_CLIENT ? GameServer()->m_apPlayers[SnappingClient] : nullptr;
+	if(!pPlayer)
+		return m_RoundStartTick;
+
+	CCharacter *pOwnChr = pPlayer->GetCharacter();
+	if(pOwnChr && pOwnChr->m_DDRaceState == ERaceState::STARTED && pPlayer->m_EnvelopeRoundStartTick >= 0)
+		return pPlayer->m_EnvelopeRoundStartTick;
+
+	const int LagTicks = EnvelopeLagTicks(Server(), pPlayer->m_Latency.m_Min);
+	return m_RoundStartTick - LagTicks;
+}
+
+void IGameController::UpdatePlayerEnvelopeRoundStart(int ClientId)
+{
+	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingFreezeQuads())
+		return;
+
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return;
+
+	CPlayer *pPlayer = GameServer()->m_apPlayers[ClientId];
+	if(!pPlayer)
+		return;
+
+	const int LagTicks = EnvelopeLagTicks(Server(), pPlayer->m_Latency.m_Min);
+	pPlayer->m_EnvelopeRoundStartTick = m_RoundStartTick - LagTicks;
+	pPlayer->m_EnvelopeLastResyncTick = Server()->Tick();
+}
+
+void IGameController::OnPlayerEnvelopeRaceStart(int ClientId)
+{
+	UpdatePlayerEnvelopeRoundStart(ClientId);
+}
+
+void IGameController::ClearPlayerEnvelopeRoundStart(int ClientId)
+{
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return;
+
+	CPlayer *pPlayer = GameServer()->m_apPlayers[ClientId];
+	if(pPlayer)
+	{
+		pPlayer->m_EnvelopeRoundStartTick = -1;
+		pPlayer->m_EnvelopeLastResyncTick = -1;
+	}
+}
+
+void IGameController::TickEnvelopeSync()
+{
+	const int ResyncInterval = g_Config.m_SvMovingFreezeEnvelopeResync;
+	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingFreezeQuads() || ResyncInterval <= 0)
+		return;
+
+	const int ResyncTicks = ResyncInterval * Server()->TickSpeed();
+	const int Now = Server()->Tick();
+
+	for(int i = 0; i < MAX_CLIENTS; i++)
+	{
+		CPlayer *pPlayer = GameServer()->m_apPlayers[i];
+		if(!pPlayer)
+			continue;
+
+		CCharacter *pChr = pPlayer->GetCharacter();
+		if(!pChr || pChr->m_DDRaceState != ERaceState::STARTED)
+			continue;
+
+		if(pPlayer->m_EnvelopeRoundStartTick < 0)
+			continue;
+
+		if(pPlayer->m_EnvelopeLastResyncTick < 0 || Now - pPlayer->m_EnvelopeLastResyncTick >= ResyncTicks)
+			UpdatePlayerEnvelopeRoundStart(i);
+	}
 }
 
 void IGameController::Snap(int SnappingClient)
@@ -607,7 +698,7 @@ void IGameController::Snap(int SnappingClient)
 		GameInfo.m_GameStateFlags |= GAMESTATEFLAG_SUDDENDEATH;
 	if(IsGamePaused())
 		GameInfo.m_GameStateFlags |= GAMESTATEFLAG_PAUSED;
-	GameInfo.m_RoundStartTick = m_RoundStartTick;
+	GameInfo.m_RoundStartTick = SnapEnvelopeRoundStartTick(SnappingClient);
 	GameInfo.m_WarmupTimer = m_Warmup;
 
 	GameInfo.m_RoundNum = 0;
@@ -663,7 +754,7 @@ void IGameController::Snap(int SnappingClient)
 	if(Server()->IsSixup(SnappingClient))
 	{
 		protocol7::CNetObj_GameData GameData = {};
-		GameData.m_GameStartTick = m_RoundStartTick;
+		GameData.m_GameStartTick = SnapEnvelopeRoundStartTick(SnappingClient);
 		GameData.m_GameStateFlags = 0;
 		if(m_GameOverTick != -1)
 			GameData.m_GameStateFlags |= protocol7::GAMESTATEFLAG_GAMEOVER;

@@ -102,6 +102,10 @@ public:
 
 	int m_SendVoteIndex;
 
+	// Per-client envelope clock anchor for moving-freeze quad sync (-1 = unset).
+	int m_EnvelopeRoundStartTick;
+	int m_EnvelopeLastResyncTick;
+
 	CTeeInfo m_TeeInfos;
 
 	int m_DieTick;

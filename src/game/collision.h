@@ -7,10 +7,14 @@
 
 #include <engine/shared/protocol.h>
 
+#include <chrono>
 #include <map>
+#include <memory>
 #include <vector>
 
+class CQuad;
 class CTile;
+class IMap;
 class CLayers;
 class CTeleTile;
 class CSpeedupTile;
@@ -145,7 +149,28 @@ public:
 	const std::vector<vec2> &TeleCheckOuts(int Number) { return m_TeleCheckOuts[Number]; }
 	const std::vector<vec2> &TeleOthers(int Number) { return m_TeleOthers[Number]; }
 
+	// Moving freeze quads (Gores-style maps)
+	void InitMovingFreezeQuads(IMap *pMap, bool Enabled);
+	void UnloadMovingFreezeQuads();
+	bool HasMovingFreezeQuads() const { return !m_vMovingFreezeQuads.empty(); }
+	void SetEnvelopeClock(int RoundStartTick, int CurrentTick, int TickSpeed, double IntraTick = 0.0);
+	bool IntersectMovingFreeze(vec2 PrevPos, vec2 CurPos, vec2 BoxSize) const;
+	bool PointInMovingFreeze(vec2 Pos, vec2 BoxSize) const;
+
 private:
+	struct CMovingFreezeQuad
+	{
+		const CQuad *m_pQuad;
+	};
+
+	void BuildMovingFreezeQuadCache(IMap *pMap);
+	bool TestMovingFreezeAt(vec2 Pos, vec2 BoxSize, std::chrono::nanoseconds EnvelopeTime) const;
+
+	std::vector<CMovingFreezeQuad> m_vMovingFreezeQuads;
+	std::unique_ptr<class CMapBasedEnvelopePointAccess> m_pEnvelopePoints;
+	IMap *m_pMapForEnvelopes;
+	std::chrono::nanoseconds m_EnvelopeTime;
+
 	CLayers *m_pLayers;
 
 	int m_Width;
