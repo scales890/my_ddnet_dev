@@ -4476,9 +4476,9 @@ void CGameContext::OnInit(const void *pPersistentData)
 
 	Console()->ExecuteFile(g_Config.m_SvResetFile, IConsole::CLIENT_ID_UNSPECIFIED);
 
-	g_Config.m_SvMovingFreezeQuads = 0;
+	g_Config.m_SvKogQquadsEnable = 0;
 	LoadMapSettings();
-	m_MovingFreezeQuadsMapEnabled = g_Config.m_SvMovingFreezeQuads != 0;
+	m_MovingFreezeQuadsMapEnabled = g_Config.m_SvKogQquadsEnable != 0;
 
 	m_Collision.InitMovingFreezeQuads(Map(), m_MovingFreezeQuadsMapEnabled);
 
