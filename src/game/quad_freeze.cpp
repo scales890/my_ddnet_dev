@@ -91,8 +91,9 @@ bool BoxOverlapsQuad(vec2 Center, vec2 HalfSize, const vec2 aCorners[4])
 			return true;
 	}
 
-	for(const vec2 &Corner : aCorners)
+	for(int i = 0; i < 4; i++)
 	{
+		const vec2 &Corner = aCorners[i];
 		if(std::abs(Corner.x - Center.x) <= HalfSize.x && std::abs(Corner.y - Center.y) <= HalfSize.y)
 			return true;
 	}
