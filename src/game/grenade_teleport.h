@@ -1,7 +1,7 @@
 #ifndef GAME_GRENADE_TELEPORT_H
 #define GAME_GRENADE_TELEPORT_H
 
-#include <game/generated/protocol.h>
+#include <generated/protocol.h>
 
 enum class EKogGrenadeTeleResult
 {
