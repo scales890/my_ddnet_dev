@@ -643,7 +643,22 @@ void IGameController::UpdatePlayerEnvelopeRoundStart(int ClientId)
 
 void IGameController::OnPlayerEnvelopeRaceStart(int ClientId)
 {
+	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingKogQuads())
+		return;
+
 	UpdatePlayerEnvelopeRoundStart(ClientId);
+
+	CPlayer *pPlayer = GameServer()->m_apPlayers[ClientId];
+	if(!pPlayer)
+		return;
+
+	const int LatencyMs = pPlayer->m_Latency.m_Min;
+	char aBuf[128];
+	if(LatencyMs > 0)
+		str_format(aBuf, sizeof(aBuf), "Moving quads synced to your latency (%d ms)", LatencyMs);
+	else
+		str_copy(aBuf, "Moving quads synced to your connection");
+	GameServer()->SendChatTarget(ClientId, aBuf);
 }
 
 void IGameController::ClearPlayerEnvelopeRoundStart(int ClientId)

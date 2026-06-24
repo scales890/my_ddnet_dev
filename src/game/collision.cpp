@@ -400,7 +400,9 @@ bool CCollision::TestMovingQuadsAt(const std::vector<CAnimatedQuadCorners> &vCac
 		QueryKogQuadGrid(Grid, Pos.x - HalfSize.x, Pos.y - HalfSize.y, Pos.x + HalfSize.x, Pos.y + HalfSize.y, vCachedCorners.size(), Visited, Generation);
 		for(int Index : m_vKogQuadQueryCandidates)
 		{
-			if(BoxOverlapsQuad(Pos, HalfSize, vCachedCorners[Index].m_aCorners))
+			// Match regular freeze behavior more closely: the tee can overlap visually,
+			// but only freezes once its center enters the active freeze area.
+			if(PointInQuad(Pos, vCachedCorners[Index].m_aCorners))
 				return true;
 		}
 		return false;
@@ -408,7 +410,7 @@ bool CCollision::TestMovingQuadsAt(const std::vector<CAnimatedQuadCorners> &vCac
 
 	for(const CAnimatedQuadCorners &Cached : vCachedCorners)
 	{
-		if(BoxOverlapsQuad(Pos, HalfSize, Cached.m_aCorners))
+		if(PointInQuad(Pos, Cached.m_aCorners))
 			return true;
 	}
 	return false;
@@ -450,7 +452,7 @@ bool CCollision::IntersectMovingQuads(const std::vector<CAnimatedQuadCorners> &v
 			const vec2 Pos = mix(PrevPos, CurPos, Fraction);
 			for(int Index : m_vKogQuadQueryCandidates)
 			{
-				if(BoxOverlapsQuad(Pos, HalfSize, vCachedCorners[Index].m_aCorners))
+				if(PointInQuad(Pos, vCachedCorners[Index].m_aCorners))
 					return true;
 			}
 		}
