@@ -530,6 +530,8 @@ void CCharacter::FireWeapon()
 	bool FullAuto = false;
 	if(m_Core.m_ActiveWeapon == WEAPON_GRENADE || m_Core.m_ActiveWeapon == WEAPON_SHOTGUN || m_Core.m_ActiveWeapon == WEAPON_LASER)
 		FullAuto = true;
+	if(GameServer()->KogGrenadeTeleMapEnabled() && m_Core.m_ActiveWeapon == WEAPON_GRENADE)
+		FullAuto = false;
 	if(m_Core.m_Jetpack && m_Core.m_ActiveWeapon == WEAPON_GUN)
 		FullAuto = true;
 	// allow firing directly after coming out of freeze or being unfrozen
@@ -717,15 +719,15 @@ void CCharacter::FireWeapon()
 
 void CCharacter::HandleWeapons()
 {
+	if(HandleKogGrenadeTeleBeforeFire())
+		return;
+
 	//ninja
 	HandleNinja();
 	HandleJetpack();
 
 	if(m_PainSoundTimer > 0)
 		m_PainSoundTimer--;
-
-	if(HandleKogGrenadeTeleBeforeFire())
-		return;
 
 	// check reload timer
 	if(m_ReloadTimer)
@@ -818,9 +820,14 @@ void CCharacter::OnDirectInput(const CNetObj_PlayerInput *pNewInput)
 
 	if(m_NumInputs > 1 && m_pPlayer->GetTeam() != TEAM_SPECTATORS)
 	{
+		if(HandleKogGrenadeTeleBeforeFire())
+		{
+			mem_copy(&m_LatestPrevPrevInput, &m_LatestPrevInput, sizeof(m_LatestInput));
+			mem_copy(&m_LatestPrevInput, &m_LatestInput, sizeof(m_LatestInput));
+			return;
+		}
 		HandleWeaponSwitch();
-		if(!HandleKogGrenadeTeleBeforeFire())
-			FireWeapon();
+		FireWeapon();
 	}
 
 	mem_copy(&m_LatestPrevPrevInput, &m_LatestPrevInput, sizeof(m_LatestInput));

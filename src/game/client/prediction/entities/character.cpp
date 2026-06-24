@@ -327,6 +327,8 @@ void CCharacter::FireWeapon()
 	bool FullAuto = false;
 	if(m_Core.m_ActiveWeapon == WEAPON_GRENADE || m_Core.m_ActiveWeapon == WEAPON_SHOTGUN || m_Core.m_ActiveWeapon == WEAPON_LASER)
 		FullAuto = true;
+	if(g_Config.m_SvKogGrenadeTele && m_Core.m_ActiveWeapon == WEAPON_GRENADE)
+		FullAuto = false;
 	if(m_Core.m_Jetpack && m_Core.m_ActiveWeapon == WEAPON_GUN)
 		FullAuto = true;
 	if(m_FrozenLastTick)
@@ -557,15 +559,15 @@ void CCharacter::FireWeapon()
 
 void CCharacter::HandleWeapons()
 {
+	if(HandleKogGrenadeTeleBeforeFire(this))
+		return;
+
 	//ninja
 	HandleNinja();
 	HandleJetpack();
 
 	if(m_PainSoundTimer > 0)
 		m_PainSoundTimer--;
-
-	if(HandleKogGrenadeTeleBeforeFire(this))
-		return;
 
 	// check reload timer
 	if(m_ReloadTimer)
@@ -634,9 +636,13 @@ void CCharacter::OnDirectInput(const CNetObj_PlayerInput *pNewInput)
 
 	if(m_NumInputs > 1 && Team() != TEAM_SPECTATORS)
 	{
+		if(HandleKogGrenadeTeleBeforeFire(this))
+		{
+			mem_copy(&m_LatestPrevInput, &m_LatestInput, sizeof(m_LatestInput));
+			return;
+		}
 		HandleWeaponSwitch();
-		if(!HandleKogGrenadeTeleBeforeFire(this))
-			FireWeapon();
+		FireWeapon();
 	}
 
 	mem_copy(&m_LatestPrevInput, &m_LatestInput, sizeof(m_LatestInput));
