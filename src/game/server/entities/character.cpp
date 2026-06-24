@@ -478,27 +478,40 @@ bool CCharacter::TryKogGrenadeTeleport()
 	return true;
 }
 
-bool CCharacter::HandleKogGrenadeTeleOnPress()
+bool CCharacter::HandleKogGrenadeTeleBeforeFire()
 {
 	if(!GameServer()->KogGrenadeTeleMapEnabled())
 		return false;
 	if(m_Core.m_ActiveWeapon != WEAPON_GRENADE)
 		return false;
-	if(!CountInput(m_LatestPrevInput.m_Fire, m_LatestInput.m_Fire).m_Presses)
-		return false;
-	if(m_FreezeTime)
-		return false;
+
+	CProjectile *pGrenade = FindOwnedLiveGrenade(GameWorld(), m_pPlayer->GetCid());
+	const bool Press = CountInput(m_LatestPrevInput.m_Fire, m_LatestInput.m_Fire).m_Presses != 0;
+
+	if(Press && !m_FreezeTime)
+	{
+		if(m_KogGrenadeTeleTriggered)
+			return true;
+		if(pGrenade && pGrenade->StartTick() < Server()->Tick())
+		{
+			TryKogGrenadeTeleport();
+			return true;
+		}
+	}
+
 	if(m_KogGrenadeTeleTriggered)
 		return true;
-	if(!FindOwnedLiveGrenade(GameWorld(), m_pPlayer->GetCid()))
-		return false;
-	TryKogGrenadeTeleport();
-	return true;
+
+	// Own grenade still in flight: never spawn another (blocks FullAuto while held).
+	if(pGrenade)
+		return true;
+
+	return false;
 }
 
 void CCharacter::FireWeapon()
 {
-	if(HandleKogGrenadeTeleOnPress())
+	if(HandleKogGrenadeTeleBeforeFire())
 		return;
 
 	if(m_ReloadTimer != 0)
@@ -711,7 +724,7 @@ void CCharacter::HandleWeapons()
 	if(m_PainSoundTimer > 0)
 		m_PainSoundTimer--;
 
-	if(HandleKogGrenadeTeleOnPress())
+	if(HandleKogGrenadeTeleBeforeFire())
 		return;
 
 	// check reload timer
@@ -806,7 +819,8 @@ void CCharacter::OnDirectInput(const CNetObj_PlayerInput *pNewInput)
 	if(m_NumInputs > 1 && m_pPlayer->GetTeam() != TEAM_SPECTATORS)
 	{
 		HandleWeaponSwitch();
-		FireWeapon();
+		if(!HandleKogGrenadeTeleBeforeFire())
+			FireWeapon();
 	}
 
 	mem_copy(&m_LatestPrevPrevInput, &m_LatestPrevInput, sizeof(m_LatestInput));

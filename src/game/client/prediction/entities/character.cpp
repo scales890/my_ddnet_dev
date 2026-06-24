@@ -268,34 +268,43 @@ static CProjectile *FindOwnedLiveGrenade(CGameWorld *pWorld, int OwnerId)
 	return pBest;
 }
 
-static bool HandleKogGrenadeTeleOnPress(CCharacter *pChr)
+static bool HandleKogGrenadeTeleBeforeFire(CCharacter *pChr)
 {
 	if(!g_Config.m_SvKogGrenadeTele)
 		return false;
 	if(pChr->m_Core.m_ActiveWeapon != WEAPON_GRENADE)
 		return false;
-	if(!CountInput(pChr->m_LatestPrevInput.m_Fire, pChr->m_LatestInput.m_Fire).m_Presses)
-		return false;
-	if(pChr->m_FreezeTime)
-		return false;
+
+	CProjectile *pGrenade = FindOwnedLiveGrenade(pChr->GameWorld(), pChr->GetCid());
+	const bool Press = CountInput(pChr->m_LatestPrevInput.m_Fire, pChr->m_LatestInput.m_Fire).m_Presses != 0;
+
+	if(Press && !pChr->m_FreezeTime)
+	{
+		if(pChr->m_KogGrenadeTeleTriggered)
+			return true;
+		if(pGrenade && pGrenade->GetStartTick() < pChr->GameWorld()->GameTick())
+		{
+			const float Ct = (pChr->GameWorld()->GameTick() - pGrenade->GetStartTick()) / (float)pChr->GameWorld()->GameTickSpeed();
+			vec2 TelePos = pGrenade->GetPos(Ct);
+
+			pChr->m_Core.m_Pos = TelePos;
+			pChr->m_Pos = TelePos;
+			pChr->m_PrevPos = TelePos;
+			pChr->m_Core.m_Vel = vec2(0, 0);
+			pGrenade->Remove();
+			pChr->m_KogGrenadeTeleTriggered = true;
+			pChr->GameWorld()->CreatePredictedSound(TelePos, SOUND_WEAPON_SPAWN, pChr->GetCid());
+			return true;
+		}
+	}
+
 	if(pChr->m_KogGrenadeTeleTriggered)
 		return true;
 
-	CProjectile *pGrenade = FindOwnedLiveGrenade(pChr->GameWorld(), pChr->GetCid());
-	if(!pGrenade)
-		return false;
+	if(pGrenade)
+		return true;
 
-	const float Ct = (pChr->GameWorld()->GameTick() - pGrenade->GetStartTick()) / (float)pChr->GameWorld()->GameTickSpeed();
-	vec2 TelePos = pGrenade->GetPos(Ct);
-
-	pChr->m_Core.m_Pos = TelePos;
-	pChr->m_Pos = TelePos;
-	pChr->m_PrevPos = TelePos;
-	pChr->m_Core.m_Vel = vec2(0, 0);
-	pGrenade->Remove();
-	pChr->m_KogGrenadeTeleTriggered = true;
-	pChr->GameWorld()->CreatePredictedSound(TelePos, SOUND_WEAPON_SPAWN, pChr->GetCid());
-	return true;
+	return false;
 }
 
 void CCharacter::FireWeapon()
@@ -306,7 +315,7 @@ void CCharacter::FireWeapon()
 	if(!GameWorld()->m_WorldConfig.m_PredictWeapons)
 		return;
 
-	if(HandleKogGrenadeTeleOnPress(this))
+	if(HandleKogGrenadeTeleBeforeFire(this))
 		return;
 
 	if(m_ReloadTimer != 0)
@@ -555,7 +564,7 @@ void CCharacter::HandleWeapons()
 	if(m_PainSoundTimer > 0)
 		m_PainSoundTimer--;
 
-	if(HandleKogGrenadeTeleOnPress(this))
+	if(HandleKogGrenadeTeleBeforeFire(this))
 		return;
 
 	// check reload timer
@@ -626,7 +635,8 @@ void CCharacter::OnDirectInput(const CNetObj_PlayerInput *pNewInput)
 	if(m_NumInputs > 1 && Team() != TEAM_SPECTATORS)
 	{
 		HandleWeaponSwitch();
-		FireWeapon();
+		if(!HandleKogGrenadeTeleBeforeFire(this))
+			FireWeapon();
 	}
 
 	mem_copy(&m_LatestPrevInput, &m_LatestInput, sizeof(m_LatestInput));

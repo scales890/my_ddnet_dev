@@ -76,7 +76,7 @@ public:
 	void ResetInput();
 	void FireWeapon();
 	bool TryKogGrenadeTeleport();
-	bool HandleKogGrenadeTeleOnPress();
+	bool HandleKogGrenadeTeleBeforeFire();
 
 	void Die(int Killer, int Weapon, bool SendKillMsg = true);
 	bool TakeDamage(vec2 Force, int Dmg, int From, int Weapon);
