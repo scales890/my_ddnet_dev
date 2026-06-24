@@ -260,6 +260,19 @@ void CCollision::BuildMovingFreezeQuadCache(IMap *pMap)
 	}
 }
 
+static void ComputeQuadAabb(const vec2 aCorners[4], float &MinX, float &MinY, float &MaxX, float &MaxY)
+{
+	MinX = MaxX = aCorners[0].x;
+	MinY = MaxY = aCorners[0].y;
+	for(int i = 1; i < 4; i++)
+	{
+		MinX = std::min(MinX, aCorners[i].x);
+		MaxX = std::max(MaxX, aCorners[i].x);
+		MinY = std::min(MinY, aCorners[i].y);
+		MaxY = std::max(MaxY, aCorners[i].y);
+	}
+}
+
 void CCollision::DetectKogQuadFullMapMode()
 {
 	m_KogQuadFullMapMode = false;
@@ -324,19 +337,6 @@ void CCollision::InitKogQuadSpatialGrids()
 	const size_t NumCells = (size_t)m_KogQuadGridWidthCells * m_KogQuadGridHeightCells;
 	m_vFreezeQuadGrid.assign(NumCells, {});
 	m_vUnfreezeQuadGrid.assign(NumCells, {});
-}
-
-static void ComputeQuadAabb(const vec2 aCorners[4], float &MinX, float &MinY, float &MaxX, float &MaxY)
-{
-	MinX = MaxX = aCorners[0].x;
-	MinY = MaxY = aCorners[0].y;
-	for(int i = 1; i < 4; i++)
-	{
-		MinX = std::min(MinX, aCorners[i].x);
-		MaxX = std::max(MaxX, aCorners[i].x);
-		MinY = std::min(MinY, aCorners[i].y);
-		MaxY = std::max(MaxY, aCorners[i].y);
-	}
 }
 
 void CCollision::SetEnvelopeClock(int CurrentTick, int TickSpeed, double IntraTick)
