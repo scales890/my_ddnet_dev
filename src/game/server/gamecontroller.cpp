@@ -606,7 +606,7 @@ void IGameController::Tick()
 
 int IGameController::SnapEnvelopeRoundStartTick(int SnappingClient) const
 {
-	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingFreezeQuads())
+	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingKogQuads())
 		return m_RoundStartTick;
 
 	if(SnappingClient < 0)
@@ -626,7 +626,7 @@ int IGameController::SnapEnvelopeRoundStartTick(int SnappingClient) const
 
 void IGameController::UpdatePlayerEnvelopeRoundStart(int ClientId)
 {
-	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingFreezeQuads())
+	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingKogQuads())
 		return;
 
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
@@ -662,7 +662,7 @@ void IGameController::ClearPlayerEnvelopeRoundStart(int ClientId)
 void IGameController::TickEnvelopeSync()
 {
 	const int ResyncInterval = g_Config.m_SvMovingFreezeEnvelopeResync;
-	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingFreezeQuads() || ResyncInterval <= 0)
+	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingKogQuads() || ResyncInterval <= 0)
 		return;
 
 	const int ResyncTicks = ResyncInterval * Server()->TickSpeed();

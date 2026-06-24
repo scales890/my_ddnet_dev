@@ -2317,6 +2317,13 @@ void CCharacter::DDRacePostCoreTick()
 	if(Collision()->HasMovingFreezeQuads() && Collision()->IntersectMovingFreeze(m_PrevPos, m_Pos, CCharacterCore::PhysicalSizeVec2()))
 		Freeze();
 
+	if(!m_Core.m_DeepFrozen && Collision()->HasMovingUnfreezeQuads())
+	{
+		const vec2 BoxSize = CCharacterCore::PhysicalSizeVec2();
+		if(Collision()->IntersectMovingUnfreeze(m_PrevPos, m_Pos, BoxSize) || Collision()->PointInMovingUnfreeze(m_Pos, BoxSize))
+			Unfreeze();
+	}
+
 	// teleport gun
 	if(m_TeleGunTeleport)
 	{

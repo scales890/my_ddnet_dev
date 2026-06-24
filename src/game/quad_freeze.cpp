@@ -1,6 +1,7 @@
 #include "quad_freeze.h"
 
 #include <base/math.h>
+#include <base/system.h>
 
 #include <engine/map.h>
 
@@ -16,9 +17,20 @@ static void RotateQuadPoint(const CPoint &Center, CPoint &Point, float Rotation)
 	Point.y = (int)(x * std::sin(Rotation) + y * std::cos(Rotation) + Center.y);
 }
 
-bool IsMovingFreezeQuadCandidate(const CQuad &Quad)
+EMovingKogQuadLayerType MovingKogQuadLayerTypeFromName(const char *pLayerName)
 {
-	return Quad.m_PosEnv >= 0;
+	if(!pLayerName[0])
+		return EMovingKogQuadLayerType::NONE;
+	if(!str_comp(pLayerName, KOG_QUAD_LAYER_FREEZE))
+		return EMovingKogQuadLayerType::FREEZE;
+	if(!str_comp(pLayerName, KOG_QUAD_LAYER_UNFREEZE))
+		return EMovingKogQuadLayerType::UNFREEZE;
+	return EMovingKogQuadLayerType::NONE;
+}
+
+bool IsMovingKogQuadCandidate(const CQuad &Quad, EMovingKogQuadLayerType LayerType)
+{
+	return LayerType != EMovingKogQuadLayerType::NONE && Quad.m_PosEnv >= 0;
 }
 
 void GetAnimatedQuadCorners(const CQuad &Quad, IMap *pMap, CMapBasedEnvelopePointAccess &EnvelopePoints, std::chrono::nanoseconds EnvelopeTime, vec2 aCorners[4])

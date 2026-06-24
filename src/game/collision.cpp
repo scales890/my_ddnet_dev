@@ -14,6 +14,7 @@
 
 #include <game/collision.h>
 #include <game/envelope_eval.h>
+#include <game/gamecore.h>
 #include <game/layers.h>
 #include <game/mapitems.h>
 #include <game/quad_freeze.h>
@@ -163,6 +164,7 @@ void CCollision::Init(class CLayers *pLayers)
 void CCollision::UnloadMovingFreezeQuads()
 {
 	m_vMovingFreezeQuads.clear();
+	m_vMovingUnfreezeQuads.clear();
 	m_pEnvelopePoints.reset();
 	m_pMapForEnvelopes = nullptr;
 	m_EnvelopeTime = std::chrono::nanoseconds::zero();
@@ -177,8 +179,11 @@ void CCollision::InitMovingFreezeQuads(IMap *pMap, bool Enabled)
 	m_pMapForEnvelopes = pMap;
 	m_pEnvelopePoints = std::make_unique<CMapBasedEnvelopePointAccess>(pMap);
 	BuildMovingFreezeQuadCache(pMap);
-	if(!m_vMovingFreezeQuads.empty())
-		log_info("kog_qquads", "loaded %zu moving freeze quads", m_vMovingFreezeQuads.size());
+	if(!m_vMovingFreezeQuads.empty() || !m_vMovingUnfreezeQuads.empty())
+	{
+		log_info("kog_qquads", "loaded %zu moving freeze quads, %zu moving unfreeze quads",
+			m_vMovingFreezeQuads.size(), m_vMovingUnfreezeQuads.size());
+	}
 }
 
 void CCollision::BuildMovingFreezeQuadCache(IMap *pMap)
@@ -201,6 +206,12 @@ void CCollision::BuildMovingFreezeQuadCache(IMap *pMap)
 			if(pQuadLayer->m_NumQuads <= 0)
 				continue;
 
+			char aLayerName[128];
+			IntsToStr(pQuadLayer->m_aName, std::size(pQuadLayer->m_aName), aLayerName, sizeof(aLayerName));
+			const EMovingKogQuadLayerType LayerType = MovingKogQuadLayerTypeFromName(aLayerName);
+			if(LayerType == EMovingKogQuadLayerType::NONE)
+				continue;
+
 			const int DataSize = pMap->GetDataSize(pQuadLayer->m_Data);
 			if(DataSize / (int)sizeof(CQuad) < pQuadLayer->m_NumQuads)
 				continue;
@@ -208,8 +219,13 @@ void CCollision::BuildMovingFreezeQuadCache(IMap *pMap)
 			const CQuad *pQuads = static_cast<const CQuad *>(pMap->GetDataSwapped(pQuadLayer->m_Data));
 			for(int QuadIndex = 0; QuadIndex < pQuadLayer->m_NumQuads; QuadIndex++)
 			{
-				if(IsMovingFreezeQuadCandidate(pQuads[QuadIndex]))
+				if(!IsMovingKogQuadCandidate(pQuads[QuadIndex], LayerType))
+					continue;
+
+				if(LayerType == EMovingKogQuadLayerType::FREEZE)
 					m_vMovingFreezeQuads.push_back({&pQuads[QuadIndex]});
+				else
+					m_vMovingUnfreezeQuads.push_back({&pQuads[QuadIndex]});
 			}
 		}
 	}
@@ -220,25 +236,35 @@ void CCollision::SetEnvelopeClock(int RoundStartTick, int CurrentTick, int TickS
 	m_EnvelopeTime = EnvelopeTimeFromTick(CurrentTick, RoundStartTick, TickSpeed, IntraTick);
 }
 
-bool CCollision::TestMovingFreezeAt(vec2 Pos, vec2 BoxSize, std::chrono::nanoseconds EnvelopeTime) const
+bool CCollision::TestMovingQuadsAt(const std::vector<CMovingKogQuad> &vQuads, vec2 Pos, vec2 BoxSize, std::chrono::nanoseconds EnvelopeTime) const
 {
-	if(m_vMovingFreezeQuads.empty() || !m_pEnvelopePoints || !m_pMapForEnvelopes)
+	if(vQuads.empty() || !m_pEnvelopePoints || !m_pMapForEnvelopes)
 		return false;
 
 	const vec2 HalfSize = BoxSize * 0.5f;
 	vec2 aCorners[4];
-	for(const CMovingFreezeQuad &FreezeQuad : m_vMovingFreezeQuads)
+	for(const CMovingKogQuad &KogQuad : vQuads)
 	{
-		GetAnimatedQuadCorners(*FreezeQuad.m_pQuad, m_pMapForEnvelopes, *m_pEnvelopePoints, EnvelopeTime, aCorners);
+		GetAnimatedQuadCorners(*KogQuad.m_pQuad, m_pMapForEnvelopes, *m_pEnvelopePoints, EnvelopeTime, aCorners);
 		if(BoxOverlapsQuad(Pos, HalfSize, aCorners))
 			return true;
 	}
 	return false;
 }
 
-bool CCollision::IntersectMovingFreeze(vec2 PrevPos, vec2 CurPos, vec2 BoxSize) const
+bool CCollision::TestMovingFreezeAt(vec2 Pos, vec2 BoxSize, std::chrono::nanoseconds EnvelopeTime) const
 {
-	if(m_vMovingFreezeQuads.empty())
+	return TestMovingQuadsAt(m_vMovingFreezeQuads, Pos, BoxSize, EnvelopeTime);
+}
+
+bool CCollision::TestMovingUnfreezeAt(vec2 Pos, vec2 BoxSize, std::chrono::nanoseconds EnvelopeTime) const
+{
+	return TestMovingQuadsAt(m_vMovingUnfreezeQuads, Pos, BoxSize, EnvelopeTime);
+}
+
+bool CCollision::IntersectMovingQuads(const std::vector<CMovingKogQuad> &vQuads, vec2 PrevPos, vec2 CurPos, vec2 BoxSize) const
+{
+	if(vQuads.empty())
 		return false;
 
 	const vec2 Delta = CurPos - PrevPos;
@@ -248,15 +274,30 @@ bool CCollision::IntersectMovingFreeze(vec2 PrevPos, vec2 CurPos, vec2 BoxSize) 
 	{
 		const float Fraction = Step / (float)Steps;
 		const vec2 Pos = mix(PrevPos, CurPos, Fraction);
-		if(TestMovingFreezeAt(Pos, BoxSize, m_EnvelopeTime))
+		if(TestMovingQuadsAt(vQuads, Pos, BoxSize, m_EnvelopeTime))
 			return true;
 	}
 	return false;
 }
 
+bool CCollision::IntersectMovingFreeze(vec2 PrevPos, vec2 CurPos, vec2 BoxSize) const
+{
+	return IntersectMovingQuads(m_vMovingFreezeQuads, PrevPos, CurPos, BoxSize);
+}
+
 bool CCollision::PointInMovingFreeze(vec2 Pos, vec2 BoxSize) const
 {
 	return TestMovingFreezeAt(Pos, BoxSize, m_EnvelopeTime);
+}
+
+bool CCollision::IntersectMovingUnfreeze(vec2 PrevPos, vec2 CurPos, vec2 BoxSize) const
+{
+	return IntersectMovingQuads(m_vMovingUnfreezeQuads, PrevPos, CurPos, BoxSize);
+}
+
+bool CCollision::PointInMovingUnfreeze(vec2 Pos, vec2 BoxSize) const
+{
+	return TestMovingUnfreezeAt(Pos, BoxSize, m_EnvelopeTime);
 }
 
 void CCollision::Unload()

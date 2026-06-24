@@ -149,24 +149,32 @@ public:
 	const std::vector<vec2> &TeleCheckOuts(int Number) { return m_TeleCheckOuts[Number]; }
 	const std::vector<vec2> &TeleOthers(int Number) { return m_TeleOthers[Number]; }
 
-	// Moving freeze quads (Gores-style maps)
+	// Moving KOG quads (Gores-style maps, layer names QFr / QUnFr)
 	void InitMovingFreezeQuads(IMap *pMap, bool Enabled);
 	void UnloadMovingFreezeQuads();
 	bool HasMovingFreezeQuads() const { return !m_vMovingFreezeQuads.empty(); }
+	bool HasMovingUnfreezeQuads() const { return !m_vMovingUnfreezeQuads.empty(); }
+	bool HasMovingKogQuads() const { return HasMovingFreezeQuads() || HasMovingUnfreezeQuads(); }
 	void SetEnvelopeClock(int RoundStartTick, int CurrentTick, int TickSpeed, double IntraTick = 0.0);
 	bool IntersectMovingFreeze(vec2 PrevPos, vec2 CurPos, vec2 BoxSize) const;
 	bool PointInMovingFreeze(vec2 Pos, vec2 BoxSize) const;
+	bool IntersectMovingUnfreeze(vec2 PrevPos, vec2 CurPos, vec2 BoxSize) const;
+	bool PointInMovingUnfreeze(vec2 Pos, vec2 BoxSize) const;
 
 private:
-	struct CMovingFreezeQuad
+	struct CMovingKogQuad
 	{
 		const CQuad *m_pQuad;
 	};
 
 	void BuildMovingFreezeQuadCache(IMap *pMap);
+	bool TestMovingQuadsAt(const std::vector<CMovingKogQuad> &vQuads, vec2 Pos, vec2 BoxSize, std::chrono::nanoseconds EnvelopeTime) const;
 	bool TestMovingFreezeAt(vec2 Pos, vec2 BoxSize, std::chrono::nanoseconds EnvelopeTime) const;
+	bool TestMovingUnfreezeAt(vec2 Pos, vec2 BoxSize, std::chrono::nanoseconds EnvelopeTime) const;
+	bool IntersectMovingQuads(const std::vector<CMovingKogQuad> &vQuads, vec2 PrevPos, vec2 CurPos, vec2 BoxSize) const;
 
-	std::vector<CMovingFreezeQuad> m_vMovingFreezeQuads;
+	std::vector<CMovingKogQuad> m_vMovingFreezeQuads;
+	std::vector<CMovingKogQuad> m_vMovingUnfreezeQuads;
 	std::unique_ptr<class CMapBasedEnvelopePointAccess> m_pEnvelopePoints;
 	IMap *m_pMapForEnvelopes;
 	std::chrono::nanoseconds m_EnvelopeTime;

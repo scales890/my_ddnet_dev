@@ -11,7 +11,18 @@
 
 class IMap;
 
-bool IsMovingFreezeQuadCandidate(const CQuad &Quad);
+enum class EMovingKogQuadLayerType
+{
+	NONE,
+	FREEZE,
+	UNFREEZE,
+};
+
+constexpr const char *KOG_QUAD_LAYER_FREEZE = "QFr";
+constexpr const char *KOG_QUAD_LAYER_UNFREEZE = "QUnFr";
+
+EMovingKogQuadLayerType MovingKogQuadLayerTypeFromName(const char *pLayerName);
+bool IsMovingKogQuadCandidate(const CQuad &Quad, EMovingKogQuadLayerType LayerType);
 
 void GetAnimatedQuadCorners(const CQuad &Quad, IMap *pMap, CMapBasedEnvelopePointAccess &EnvelopePoints, std::chrono::nanoseconds EnvelopeTime, vec2 aCorners[4]);
 

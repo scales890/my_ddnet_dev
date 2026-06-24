@@ -49,14 +49,23 @@ TEST(QuadFreeze, BoxOverlapsQuad)
 	EXPECT_FALSE(BoxOverlapsQuad(vec2(64.0f, 64.0f), vec2(14.0f, 14.0f), aCorners));
 }
 
-TEST(QuadFreeze, MovingFreezeQuadCandidateRequiresPositionEnvelope)
+TEST(QuadFreeze, MovingKogQuadLayerTypeFromName)
+{
+	EXPECT_EQ(MovingKogQuadLayerTypeFromName(""), EMovingKogQuadLayerType::NONE);
+	EXPECT_EQ(MovingKogQuadLayerTypeFromName("Quads"), EMovingKogQuadLayerType::NONE);
+	EXPECT_EQ(MovingKogQuadLayerTypeFromName(KOG_QUAD_LAYER_FREEZE), EMovingKogQuadLayerType::FREEZE);
+	EXPECT_EQ(MovingKogQuadLayerTypeFromName(KOG_QUAD_LAYER_UNFREEZE), EMovingKogQuadLayerType::UNFREEZE);
+}
+
+TEST(QuadFreeze, MovingKogQuadCandidateRequiresLayerAndPositionEnvelope)
 {
 	CQuad Quad = {};
-	Quad.m_PosEnv = -1;
-	EXPECT_FALSE(IsMovingFreezeQuadCandidate(Quad));
+	EXPECT_FALSE(IsMovingKogQuadCandidate(Quad, EMovingKogQuadLayerType::NONE));
+	EXPECT_FALSE(IsMovingKogQuadCandidate(Quad, EMovingKogQuadLayerType::FREEZE));
 
 	Quad.m_PosEnv = 0;
-	EXPECT_TRUE(IsMovingFreezeQuadCandidate(Quad));
+	EXPECT_TRUE(IsMovingKogQuadCandidate(Quad, EMovingKogQuadLayerType::FREEZE));
+	EXPECT_TRUE(IsMovingKogQuadCandidate(Quad, EMovingKogQuadLayerType::UNFREEZE));
 }
 
 TEST(QuadFreeze, EnvelopeTimeFromTick)
