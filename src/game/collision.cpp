@@ -23,6 +23,8 @@
 #include <chrono>
 #include <cmath>
 
+using namespace std::chrono_literals;
+
 vec2 ClampVel(int MoveRestriction, vec2 Vel)
 {
 	if(Vel.x > 0 && (MoveRestriction & CANTMOVE_RIGHT))
