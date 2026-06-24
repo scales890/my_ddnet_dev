@@ -322,6 +322,20 @@ void CCollision::BuildMovingKogEnvelopeSampleTimes(std::vector<std::chrono::nano
 	for(double Intra : s_aIntraSamples)
 		vTimes.push_back(MovingKogEnvelopeTimeAt(Intra));
 
+	const int SyncTicks = m_EnvelopeSyncTimeSeconds * m_EnvelopeTickSpeed;
+	if(SyncTicks <= 0)
+		return;
+
+	int PhaseTick = m_EnvelopeCurrentTick - m_EnvelopeSyncAnchorTick;
+	PhaseTick %= SyncTicks;
+	if(PhaseTick < 0)
+		PhaseTick += SyncTicks;
+
+	// Only add absolute end-of-cycle samples when the current tick is near the wrap point.
+	const int EndWindowTicks = std::max(3, m_EnvelopeTickSpeed / 10);
+	if(PhaseTick + EndWindowTicks < SyncTicks)
+		return;
+
 	const int64_t SyncNanos = (int64_t)m_EnvelopeSyncTimeSeconds * std::chrono::nanoseconds(1s).count();
 	static const int s_aEndOffsetsMs[] = {1, 2, 5, 10, 20, 50, 100, 200};
 	for(int OffsetMs : s_aEndOffsetsMs)
