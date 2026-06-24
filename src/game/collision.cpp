@@ -274,10 +274,10 @@ static void ComputeQuadAabb(const vec2 aCorners[4], float &MinX, float &MinY, fl
 	MinY = MaxY = aCorners[0].y;
 	for(int i = 1; i < 4; i++)
 	{
-		MinX = minimum(MinX, aCorners[i].x);
-		MaxX = maximum(MaxX, aCorners[i].x);
-		MinY = minimum(MinY, aCorners[i].y);
-		MaxY = maximum(MaxY, aCorners[i].y);
+		MinX = std::min(MinX, aCorners[i].x);
+		MaxX = std::max(MaxX, aCorners[i].x);
+		MinY = std::min(MinY, aCorners[i].y);
+		MaxY = std::max(MaxY, aCorners[i].y);
 	}
 }
 
@@ -436,10 +436,10 @@ bool CCollision::IntersectMovingQuads(const std::vector<CAnimatedQuadCorners> &v
 
 	if(m_KogQuadGridWidthCells > 0 && !Grid.empty())
 	{
-		const float MinX = minimum(PrevPos.x, CurPos.x) - HalfSize.x;
-		const float MinY = minimum(PrevPos.y, CurPos.y) - HalfSize.y;
-		const float MaxX = maximum(PrevPos.x, CurPos.x) + HalfSize.x;
-		const float MaxY = maximum(PrevPos.y, CurPos.y) + HalfSize.y;
+		const float MinX = std::min(PrevPos.x, CurPos.x) - HalfSize.x;
+		const float MinY = std::min(PrevPos.y, CurPos.y) - HalfSize.y;
+		const float MaxX = std::max(PrevPos.x, CurPos.x) + HalfSize.x;
+		const float MaxY = std::max(PrevPos.y, CurPos.y) + HalfSize.y;
 		QueryKogQuadGrid(Grid, MinX, MinY, MaxX, MaxY, vCachedCorners.size(), Visited, Generation);
 		if(m_vKogQuadQueryCandidates.empty())
 			return false;
