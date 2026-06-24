@@ -312,15 +312,9 @@ std::chrono::nanoseconds CCollision::MovingKogEnvelopeTimeAt(double IntraTick) c
 void CCollision::BuildMovingKogEnvelopeSampleTimes(std::vector<std::chrono::nanoseconds> &vTimes) const
 {
 	vTimes.clear();
+	vTimes.push_back(MovingKogEnvelopeTimeAt(0.0));
 	if(m_EnvelopeSyncTimeSeconds <= 0)
-	{
-		vTimes.push_back(MovingKogEnvelopeTimeAt(0.0));
 		return;
-	}
-
-	static const double s_aIntraSamples[KOG_QUAD_TIME_SAMPLE_COUNT] = {0.0, 0.25, 0.5, 0.75, 1.0};
-	for(double Intra : s_aIntraSamples)
-		vTimes.push_back(MovingKogEnvelopeTimeAt(Intra));
 
 	const int SyncTicks = m_EnvelopeSyncTimeSeconds * m_EnvelopeTickSpeed;
 	if(SyncTicks <= 0)
@@ -371,37 +365,14 @@ void CCollision::RebuildAnimatedQuadCache()
 	if(!m_pEnvelopePoints || !m_pMapForEnvelopes)
 		return;
 
-	static const double s_aIntraSamples[KOG_QUAD_TIME_SAMPLE_COUNT] = {0.0, 0.25, 0.5, 0.75, 1.0};
-	const int SampleCount = m_EnvelopeSyncTimeSeconds > 0 ? KOG_QUAD_TIME_SAMPLE_COUNT : 1;
-
 	auto RebuildOneCache = [&](const std::vector<CMovingKogQuad> &vQuads, std::vector<CAnimatedQuadCorners> &vCached) {
 		vCached.reserve(vQuads.size());
+		const auto SampleTime = MovingKogEnvelopeTimeAt(0.0);
 		for(const CMovingKogQuad &KogQuad : vQuads)
 		{
 			CAnimatedQuadCorners Cached;
-			vec2 aSampleCorners[4];
-			bool FirstSample = true;
-			for(int Sample = 0; Sample < SampleCount; Sample++)
-			{
-				const auto SampleTime = MovingKogEnvelopeTimeAt(s_aIntraSamples[Sample]);
-				GetAnimatedQuadCorners(*KogQuad.m_pQuad, m_pMapForEnvelopes, *m_pEnvelopePoints, SampleTime, aSampleCorners);
-				if(FirstSample)
-				{
-					for(int i = 0; i < 4; i++)
-						Cached.m_aCorners[i] = aSampleCorners[i];
-					ComputeQuadAabb(aSampleCorners, Cached.m_MinX, Cached.m_MinY, Cached.m_MaxX, Cached.m_MaxY);
-					FirstSample = false;
-				}
-				else
-				{
-					float MinX, MinY, MaxX, MaxY;
-					ComputeQuadAabb(aSampleCorners, MinX, MinY, MaxX, MaxY);
-					Cached.m_MinX = std::min(Cached.m_MinX, MinX);
-					Cached.m_MinY = std::min(Cached.m_MinY, MinY);
-					Cached.m_MaxX = std::max(Cached.m_MaxX, MaxX);
-					Cached.m_MaxY = std::max(Cached.m_MaxY, MaxY);
-				}
-			}
+			GetAnimatedQuadCorners(*KogQuad.m_pQuad, m_pMapForEnvelopes, *m_pEnvelopePoints, SampleTime, Cached.m_aCorners);
+			ComputeQuadAabb(Cached.m_aCorners, Cached.m_MinX, Cached.m_MinY, Cached.m_MaxX, Cached.m_MaxY);
 			vCached.push_back(Cached);
 		}
 	};

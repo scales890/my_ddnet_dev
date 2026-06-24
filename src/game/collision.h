@@ -178,7 +178,6 @@ private:
 	};
 
 	static constexpr int KOG_QUAD_GRID_CELL_SIZE = 64;
-	static constexpr int KOG_QUAD_TIME_SAMPLE_COUNT = 5;
 
 	void BuildMovingFreezeQuadCache(IMap *pMap);
 	void InitKogQuadSpatialGrids();
