@@ -167,14 +167,41 @@ private:
 		const CQuad *m_pQuad;
 	};
 
+	struct CAnimatedQuadCorners
+	{
+		vec2 m_aCorners[4];
+		float m_MinX;
+		float m_MinY;
+		float m_MaxX;
+		float m_MaxY;
+	};
+
+	static constexpr int KOG_QUAD_GRID_CELL_SIZE = 64;
+
 	void BuildMovingFreezeQuadCache(IMap *pMap);
-	bool TestMovingQuadsAt(const std::vector<CMovingKogQuad> &vQuads, vec2 Pos, vec2 BoxSize, std::chrono::nanoseconds EnvelopeTime) const;
-	bool TestMovingFreezeAt(vec2 Pos, vec2 BoxSize, std::chrono::nanoseconds EnvelopeTime) const;
-	bool TestMovingUnfreezeAt(vec2 Pos, vec2 BoxSize, std::chrono::nanoseconds EnvelopeTime) const;
-	bool IntersectMovingQuads(const std::vector<CMovingKogQuad> &vQuads, vec2 PrevPos, vec2 CurPos, vec2 BoxSize) const;
+	void InitKogQuadSpatialGrids();
+	void RebuildAnimatedQuadCache();
+	void RebuildKogQuadSpatialGrids();
+	void QueryKogQuadGrid(const std::vector<std::vector<int>> &Grid, float MinX, float MinY, float MaxX, float MaxY, size_t NumQuads, std::vector<uint32_t> &Visited, int &Generation) const;
+	bool TestMovingQuadsAt(const std::vector<CAnimatedQuadCorners> &vCachedCorners, const std::vector<std::vector<int>> &Grid, vec2 Pos, vec2 BoxSize, std::vector<uint32_t> &Visited, int &Generation) const;
+	bool TestMovingFreezeAt(vec2 Pos, vec2 BoxSize) const;
+	bool TestMovingUnfreezeAt(vec2 Pos, vec2 BoxSize) const;
+	bool IntersectMovingQuads(const std::vector<CAnimatedQuadCorners> &vCachedCorners, const std::vector<std::vector<int>> &Grid, vec2 PrevPos, vec2 CurPos, vec2 BoxSize, std::vector<uint32_t> &Visited, int &Generation) const;
 
 	std::vector<CMovingKogQuad> m_vMovingFreezeQuads;
 	std::vector<CMovingKogQuad> m_vMovingUnfreezeQuads;
+	std::vector<CAnimatedQuadCorners> m_vCachedFreezeCorners;
+	std::vector<CAnimatedQuadCorners> m_vCachedUnfreezeCorners;
+	int m_KogQuadGridCellSize;
+	int m_KogQuadGridWidthCells;
+	int m_KogQuadGridHeightCells;
+	std::vector<std::vector<int>> m_vFreezeQuadGrid;
+	std::vector<std::vector<int>> m_vUnfreezeQuadGrid;
+	mutable int m_KogQuadQueryGenerationFreeze;
+	mutable int m_KogQuadQueryGenerationUnfreeze;
+	mutable std::vector<uint32_t> m_vKogQuadQueryVisitedFreeze;
+	mutable std::vector<uint32_t> m_vKogQuadQueryVisitedUnfreeze;
+	mutable std::vector<int> m_vKogQuadQueryCandidates;
 	std::unique_ptr<class CMapBasedEnvelopePointAccess> m_pEnvelopePoints;
 	IMap *m_pMapForEnvelopes;
 	std::chrono::nanoseconds m_EnvelopeTime;
