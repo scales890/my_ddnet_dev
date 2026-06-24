@@ -177,16 +177,19 @@ private:
 	};
 
 	static constexpr int KOG_QUAD_GRID_CELL_SIZE = 64;
+	static constexpr int KOG_QUAD_TIME_SAMPLE_COUNT = 5;
 
 	void BuildMovingFreezeQuadCache(IMap *pMap);
 	void InitKogQuadSpatialGrids();
 	void RebuildAnimatedQuadCache();
 	void RebuildKogQuadSpatialGrids();
+	std::chrono::nanoseconds MovingKogEnvelopeTimeAt(double IntraTick) const;
 	void QueryKogQuadGrid(const std::vector<std::vector<int>> &Grid, float MinX, float MinY, float MaxX, float MaxY, size_t NumQuads, std::vector<uint32_t> &Visited, int &Generation) const;
-	bool TestMovingQuadsAt(const std::vector<CAnimatedQuadCorners> &vCachedCorners, const std::vector<std::vector<int>> &Grid, vec2 Pos, vec2 BoxSize, std::vector<uint32_t> &Visited, int &Generation) const;
+	bool PointInKogQuadsAtEnvelopeTime(vec2 Pos, const std::vector<CMovingKogQuad> &vQuads, const std::vector<int> &vCandidateIndices, std::chrono::nanoseconds EnvelopeTime) const;
+	bool TestMovingQuadsAt(const std::vector<CMovingKogQuad> &vQuads, const std::vector<CAnimatedQuadCorners> &vCachedCorners, const std::vector<std::vector<int>> &Grid, vec2 Pos, vec2 BoxSize, std::vector<uint32_t> &Visited, int &Generation) const;
 	bool TestMovingFreezeAt(vec2 Pos, vec2 BoxSize) const;
 	bool TestMovingUnfreezeAt(vec2 Pos, vec2 BoxSize) const;
-	bool IntersectMovingQuads(const std::vector<CAnimatedQuadCorners> &vCachedCorners, const std::vector<std::vector<int>> &Grid, vec2 PrevPos, vec2 CurPos, vec2 BoxSize, std::vector<uint32_t> &Visited, int &Generation) const;
+	bool IntersectMovingQuads(const std::vector<CMovingKogQuad> &vQuads, const std::vector<CAnimatedQuadCorners> &vCachedCorners, const std::vector<std::vector<int>> &Grid, vec2 PrevPos, vec2 CurPos, vec2 BoxSize, std::vector<uint32_t> &Visited, int &Generation) const;
 
 	std::vector<CMovingKogQuad> m_vMovingFreezeQuads;
 	std::vector<CMovingKogQuad> m_vMovingUnfreezeQuads;
@@ -205,6 +208,10 @@ private:
 	std::unique_ptr<class CMapBasedEnvelopePointAccess> m_pEnvelopePoints;
 	IMap *m_pMapForEnvelopes;
 	std::chrono::nanoseconds m_EnvelopeTime;
+	int m_EnvelopeRoundStartTick;
+	int m_EnvelopeCurrentTick;
+	int m_EnvelopeTickSpeed;
+	int m_EnvelopeSyncTimeSeconds;
 
 	CLayers *m_pLayers;
 
