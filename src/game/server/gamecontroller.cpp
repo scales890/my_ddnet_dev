@@ -609,88 +609,28 @@ int IGameController::SnapEnvelopeRoundStartTick(int SnappingClient) const
 	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingKogQuads())
 		return m_RoundStartTick;
 
-	const int SyncTime = g_Config.m_SvKogQquadsSyncTime;
-	if(SyncTime > 0)
+	const int AnchorTick = GameServer()->Collision()->KogQuadSyncAnchorTick();
+	int LagTicks = 0;
+	if(SnappingClient >= 0 && SnappingClient != SERVER_DEMO_CLIENT)
 	{
-		const int SyncTicks = SyncTime * Server()->TickSpeed();
-		const int Now = Server()->Tick();
-		const int AnchorTick = GameServer()->Collision()->KogQuadSyncAnchorTick();
-		int PhaseTick = 0;
-		if(SyncTicks > 0)
-		{
-			PhaseTick = (Now - AnchorTick) % SyncTicks;
-			if(PhaseTick < 0)
-				PhaseTick += SyncTicks;
-		}
-		int LagTicks = 0;
-		if(SnappingClient >= 0 && SnappingClient != SERVER_DEMO_CLIENT)
-		{
-			CPlayer *pPlayer = GameServer()->m_apPlayers[SnappingClient];
-			if(pPlayer)
-				LagTicks = EnvelopeLagTicks(Server(), pPlayer->m_Latency.m_Min);
-		}
-		return Now - PhaseTick - LagTicks;
+		CPlayer *pPlayer = GameServer()->m_apPlayers[SnappingClient];
+		if(pPlayer)
+			LagTicks = EnvelopeLagTicks(Server(), pPlayer->m_Latency.m_Min);
 	}
 
-	if(SnappingClient < 0)
-		return m_RoundStartTick;
-
-	CPlayer *pPlayer = SnappingClient != SERVER_DEMO_CLIENT ? GameServer()->m_apPlayers[SnappingClient] : nullptr;
-	if(!pPlayer)
-		return m_RoundStartTick;
-
-	CCharacter *pOwnChr = pPlayer->GetCharacter();
-	if(pOwnChr && pOwnChr->m_DDRaceState == ERaceState::STARTED && pPlayer->m_EnvelopeRoundStartTick >= 0)
-		return pPlayer->m_EnvelopeRoundStartTick;
-
-	const int LagTicks = EnvelopeLagTicks(Server(), pPlayer->m_Latency.m_Min);
+	if(AnchorTick >= 0)
+		return AnchorTick - LagTicks;
 	return m_RoundStartTick - LagTicks;
 }
 
 void IGameController::UpdatePlayerEnvelopeRoundStart(int ClientId)
 {
-	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingKogQuads())
-		return;
-
-	if(g_Config.m_SvKogQquadsSyncTime > 0)
-		return;
-
-	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
-		return;
-
-	CPlayer *pPlayer = GameServer()->m_apPlayers[ClientId];
-	if(!pPlayer)
-		return;
-
-	const int LagTicks = EnvelopeLagTicks(Server(), pPlayer->m_Latency.m_Min);
-	pPlayer->m_EnvelopeRoundStartTick = m_RoundStartTick - LagTicks;
-	pPlayer->m_EnvelopeLastResyncTick = Server()->Tick();
+	(void)ClientId;
 }
 
 void IGameController::OnPlayerEnvelopeRaceStart(int ClientId)
 {
-	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingKogQuads())
-		return;
-
-	if(g_Config.m_SvKogQquadsSyncTime > 0)
-		return;
-
-	CPlayer *pPlayer = GameServer()->m_apPlayers[ClientId];
-	if(!pPlayer)
-		return;
-
-	const bool FirstSyncForRun = pPlayer->m_EnvelopeRoundStartTick < 0;
-	UpdatePlayerEnvelopeRoundStart(ClientId);
-	if(!FirstSyncForRun)
-		return;
-
-	const int LatencyMs = pPlayer->m_Latency.m_Min;
-	char aBuf[128];
-	if(LatencyMs > 0)
-		str_format(aBuf, sizeof(aBuf), "Moving quads synced to your latency (%d ms)", LatencyMs);
-	else
-		str_copy(aBuf, "Moving quads synced to your connection");
-	GameServer()->SendChatTarget(ClientId, aBuf);
+	(void)ClientId;
 }
 
 void IGameController::ClearPlayerEnvelopeRoundStart(int ClientId)
@@ -708,29 +648,6 @@ void IGameController::ClearPlayerEnvelopeRoundStart(int ClientId)
 
 void IGameController::TickEnvelopeSync()
 {
-	const int ResyncInterval = g_Config.m_SvMovingFreezeEnvelopeResync;
-	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingKogQuads() || ResyncInterval <= 0 || g_Config.m_SvKogQquadsSyncTime > 0)
-		return;
-
-	const int ResyncTicks = ResyncInterval * Server()->TickSpeed();
-	const int Now = Server()->Tick();
-
-	for(int i = 0; i < MAX_CLIENTS; i++)
-	{
-		CPlayer *pPlayer = GameServer()->m_apPlayers[i];
-		if(!pPlayer)
-			continue;
-
-		CCharacter *pChr = pPlayer->GetCharacter();
-		if(!pChr || pChr->m_DDRaceState != ERaceState::STARTED)
-			continue;
-
-		if(pPlayer->m_EnvelopeRoundStartTick < 0)
-			continue;
-
-		if(pPlayer->m_EnvelopeLastResyncTick < 0 || Now - pPlayer->m_EnvelopeLastResyncTick >= ResyncTicks)
-			UpdatePlayerEnvelopeRoundStart(i);
-	}
 }
 
 void IGameController::Snap(int SnappingClient)

@@ -530,7 +530,6 @@ MACRO_CONFIG_INT(SvEndlessDrag, sv_endless_drag, 0, 0, 1, CFGFLAG_SERVER | CFGFL
 MACRO_CONFIG_INT(SvTestingCommands, sv_test_cmds, 0, 0, 1, CFGFLAG_SERVER, "Turns testing commands aka cheats on/off (setting only works in initial config)")
 MACRO_CONFIG_INT(SvFreezeDelay, sv_freeze_delay, 3, 1, 30, CFGFLAG_SERVER | CFGFLAG_GAME, "How many seconds the players will remain frozen (applies to all except delayed freeze in switch layer & deepfreeze)")
 MACRO_CONFIG_INT(SvKogQquadsEnable, sv_kog_qquads_enable, 0, 0, 1, CFGFLAG_SERVER | CFGFLAG_GAME, "Enable KOG moving freeze quads (set via embedded map settings only)")
-MACRO_CONFIG_INT(SvKogQquadsSyncTime, sv_kog_qquads_sync_time, 0, 0, 3600, CFGFLAG_SERVER | CFGFLAG_GAME, "Global moving quad envelope cycle in seconds (set via embedded map settings only, 0 = use round start)")
 MACRO_CONFIG_INT(SvKogQquadsDebug, sv_kog_qquads_debug, 0, 0, 1, CFGFLAG_SERVER, "Log moving quad sync collision diagnostics")
 MACRO_CONFIG_INT(SvMovingFreezeEnvelopeResync, sv_moving_freeze_envelope_resync, 0, 0, 60, CFGFLAG_SERVER, "Re-sync moving freeze envelope timing every N seconds for racing players (server config only, 0 = only at start)")
 MACRO_CONFIG_INT(ClDDRaceBindsSet, cl_race_binds_set, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "What level the DDRace binds are set to (this is automated, you don't need to use this)")

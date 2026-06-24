@@ -156,7 +156,7 @@ public:
 	bool HasMovingUnfreezeQuads() const { return !m_vMovingUnfreezeQuads.empty(); }
 	bool HasMovingKogQuads() const { return HasMovingFreezeQuads() || HasMovingUnfreezeQuads(); }
 	int KogQuadSyncAnchorTick() const { return m_EnvelopeSyncAnchorTick; }
-	void SetEnvelopeClock(int RoundStartTick, int CurrentTick, int TickSpeed, int SyncTimeSeconds = 0, double IntraTick = 0.0);
+	void SetEnvelopeClock(int CurrentTick, int TickSpeed, double IntraTick = 0.0);
 	bool IntersectMovingFreeze(vec2 PrevPos, vec2 CurPos, vec2 BoxSize) const;
 	bool PointInMovingFreeze(vec2 Pos, vec2 BoxSize) const;
 	bool IntersectMovingUnfreeze(vec2 PrevPos, vec2 CurPos, vec2 BoxSize) const;
@@ -181,6 +181,7 @@ private:
 	static constexpr double KOG_QUAD_ENVELOPE_INTRA_SAMPLE = 0.9;
 
 	void BuildMovingFreezeQuadCache(IMap *pMap);
+	void DetectKogQuadFullMapMode();
 	void InitKogQuadSpatialGrids();
 	void RebuildAnimatedQuadCache();
 	void RebuildKogQuadSpatialGrids();
@@ -212,10 +213,9 @@ private:
 	std::unique_ptr<class CMapBasedEnvelopePointAccess> m_pEnvelopePoints;
 	IMap *m_pMapForEnvelopes;
 	std::chrono::nanoseconds m_EnvelopeTime;
-	int m_EnvelopeRoundStartTick;
 	int m_EnvelopeCurrentTick;
 	int m_EnvelopeTickSpeed;
-	int m_EnvelopeSyncTimeSeconds;
+	bool m_KogQuadFullMapMode;
 	int m_EnvelopeSyncAnchorTick;
 
 	CLayers *m_pLayers;

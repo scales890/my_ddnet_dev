@@ -122,20 +122,32 @@ bool BoxOverlapsQuad(vec2 Center, vec2 HalfSize, const vec2 aCorners[4])
 	return false;
 }
 
-std::chrono::nanoseconds EnvelopeTimeFromTick(int CurrentTick, int RoundStartTick, int TickSpeed, int SyncTimeSeconds, int SyncAnchorTick, double IntraTick)
+std::chrono::nanoseconds GetQuadPositionEnvelopeMaxTime(const CQuad &Quad, IMap *pMap, CMapBasedEnvelopePointAccess &EnvelopePoints)
+{
+	if(Quad.m_PosEnv < 0 || !pMap)
+		return std::chrono::nanoseconds::zero();
+
+	int EnvelopeStart, EnvelopeNum;
+	pMap->GetType(MAPITEMTYPE_ENVELOPE, &EnvelopeStart, &EnvelopeNum);
+	if(Quad.m_PosEnv >= EnvelopeNum)
+		return std::chrono::nanoseconds::zero();
+
+	const CMapItemEnvelope *pItem = static_cast<CMapItemEnvelope *>(pMap->GetItem(EnvelopeStart + Quad.m_PosEnv));
+	if(pItem->m_Channels <= 0 || pItem->m_NumPoints <= 0)
+		return std::chrono::nanoseconds::zero();
+
+	EnvelopePoints.SetPointsRange(pItem->m_StartPoint, pItem->m_NumPoints);
+	if(EnvelopePoints.NumPoints() <= 0)
+		return std::chrono::nanoseconds::zero();
+
+	const CEnvPoint *pLastPoint = EnvelopePoints.GetPoint(EnvelopePoints.NumPoints() - 1);
+	return std::chrono::nanoseconds((int64_t)pLastPoint->m_Time.GetInternal() * std::chrono::nanoseconds(1ms).count());
+}
+
+std::chrono::nanoseconds EnvelopeTimeFromTick(int CurrentTick, int SyncAnchorTick, int TickSpeed, double IntraTick)
 {
 	const std::chrono::nanoseconds NanosPerTick = std::chrono::nanoseconds(1s) / TickSpeed;
-	int EnvelopeTick = CurrentTick - RoundStartTick;
-	if(SyncTimeSeconds > 0)
-	{
-		const int SyncTicks = SyncTimeSeconds * TickSpeed;
-		if(SyncTicks > 0)
-		{
-			const int BaseTick = SyncAnchorTick >= 0 ? SyncAnchorTick : 0;
-			EnvelopeTick = (CurrentTick - BaseTick) % SyncTicks;
-			if(EnvelopeTick < 0)
-				EnvelopeTick += SyncTicks;
-		}
-	}
+	const int BaseTick = SyncAnchorTick >= 0 ? SyncAnchorTick : 0;
+	const int EnvelopeTick = CurrentTick - BaseTick;
 	return EnvelopeTick * NanosPerTick + std::chrono::duration_cast<std::chrono::nanoseconds>(IntraTick * NanosPerTick);
 }

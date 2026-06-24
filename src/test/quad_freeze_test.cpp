@@ -71,20 +71,13 @@ TEST(QuadFreeze, MovingKogQuadCandidateRequiresLayerAndPositionEnvelope)
 TEST(QuadFreeze, EnvelopeTimeFromTick)
 {
 	using namespace std::chrono_literals;
-	const auto Time = EnvelopeTimeFromTick(150, 100, 50, 0, -1, 0.5);
+	const auto Time = EnvelopeTimeFromTick(150, 100, 50, 0.5);
 	EXPECT_EQ(Time, 50 * 20ms + 10ms);
 }
 
-TEST(QuadFreeze, EnvelopeTimeFromTickSyncCycle)
+TEST(QuadFreeze, EnvelopeTimeFromTickUsesMapAnchor)
 {
 	using namespace std::chrono_literals;
-	const auto Time = EnvelopeTimeFromTick(1100, 100, 50, 20, 50);
-	EXPECT_EQ(Time, 50 * 20ms);
-}
-
-TEST(QuadFreeze, EnvelopeTimeFromTickSyncCycleUsesMapAnchor)
-{
-	using namespace std::chrono_literals;
-	const auto Time = EnvelopeTimeFromTick(1070, 100, 50, 20, 50);
-	EXPECT_EQ(Time, 20 * 20ms);
+	const auto Time = EnvelopeTimeFromTick(250, 100, 50);
+	EXPECT_EQ(Time, 150 * 20ms);
 }
