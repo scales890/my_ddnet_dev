@@ -609,6 +609,22 @@ int IGameController::SnapEnvelopeRoundStartTick(int SnappingClient) const
 	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingKogQuads())
 		return m_RoundStartTick;
 
+	const int SyncTime = g_Config.m_SvKogQquadsSyncTime;
+	if(SyncTime > 0)
+	{
+		const int SyncTicks = SyncTime * Server()->TickSpeed();
+		const int Now = Server()->Tick();
+		const int PhaseTick = SyncTicks > 0 ? Now % SyncTicks : 0;
+		int LagTicks = 0;
+		if(SnappingClient >= 0 && SnappingClient != SERVER_DEMO_CLIENT)
+		{
+			CPlayer *pPlayer = GameServer()->m_apPlayers[SnappingClient];
+			if(pPlayer)
+				LagTicks = EnvelopeLagTicks(Server(), pPlayer->m_Latency.m_Min);
+		}
+		return Now - PhaseTick - LagTicks;
+	}
+
 	if(SnappingClient < 0)
 		return m_RoundStartTick;
 
@@ -629,6 +645,9 @@ void IGameController::UpdatePlayerEnvelopeRoundStart(int ClientId)
 	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingKogQuads())
 		return;
 
+	if(g_Config.m_SvKogQquadsSyncTime > 0)
+		return;
+
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
 		return;
 
@@ -644,6 +663,9 @@ void IGameController::UpdatePlayerEnvelopeRoundStart(int ClientId)
 void IGameController::OnPlayerEnvelopeRaceStart(int ClientId)
 {
 	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingKogQuads())
+		return;
+
+	if(g_Config.m_SvKogQquadsSyncTime > 0)
 		return;
 
 	CPlayer *pPlayer = GameServer()->m_apPlayers[ClientId];
@@ -680,7 +702,7 @@ void IGameController::ClearPlayerEnvelopeRoundStart(int ClientId)
 void IGameController::TickEnvelopeSync()
 {
 	const int ResyncInterval = g_Config.m_SvMovingFreezeEnvelopeResync;
-	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingKogQuads() || ResyncInterval <= 0)
+	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingKogQuads() || ResyncInterval <= 0 || g_Config.m_SvKogQquadsSyncTime > 0)
 		return;
 
 	const int ResyncTicks = ResyncInterval * Server()->TickSpeed();

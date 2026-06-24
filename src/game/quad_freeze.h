@@ -30,6 +30,6 @@ bool PointInQuad(vec2 Point, const vec2 aCorners[4]);
 
 bool BoxOverlapsQuad(vec2 Center, vec2 HalfSize, const vec2 aCorners[4]);
 
-std::chrono::nanoseconds EnvelopeTimeFromTick(int CurrentTick, int RoundStartTick, int TickSpeed, double IntraTick = 0.0);
+std::chrono::nanoseconds EnvelopeTimeFromTick(int CurrentTick, int RoundStartTick, int TickSpeed, int SyncTimeSeconds = 0, double IntraTick = 0.0);
 
 #endif

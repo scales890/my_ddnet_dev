@@ -155,7 +155,7 @@ public:
 	bool HasMovingFreezeQuads() const { return !m_vMovingFreezeQuads.empty(); }
 	bool HasMovingUnfreezeQuads() const { return !m_vMovingUnfreezeQuads.empty(); }
 	bool HasMovingKogQuads() const { return HasMovingFreezeQuads() || HasMovingUnfreezeQuads(); }
-	void SetEnvelopeClock(int RoundStartTick, int CurrentTick, int TickSpeed, double IntraTick = 0.0);
+	void SetEnvelopeClock(int RoundStartTick, int CurrentTick, int TickSpeed, int SyncTimeSeconds = 0, double IntraTick = 0.0);
 	bool IntersectMovingFreeze(vec2 PrevPos, vec2 CurPos, vec2 BoxSize) const;
 	bool PointInMovingFreeze(vec2 Pos, vec2 BoxSize) const;
 	bool IntersectMovingUnfreeze(vec2 PrevPos, vec2 CurPos, vec2 BoxSize) const;

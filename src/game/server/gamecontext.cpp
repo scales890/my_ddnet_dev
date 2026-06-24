@@ -1164,7 +1164,7 @@ void CGameContext::OnTick()
 	CheckPureTuning();
 
 	if(m_pController && MovingFreezeQuadsMapEnabled())
-		m_Collision.SetEnvelopeClock(m_pController->RoundStartTick(), Server()->Tick(), Server()->TickSpeed());
+		m_Collision.SetEnvelopeClock(m_pController->RoundStartTick(), Server()->Tick(), Server()->TickSpeed(), g_Config.m_SvKogQquadsSyncTime);
 
 	if(m_TeeHistorianActive)
 	{
@@ -4477,12 +4477,15 @@ void CGameContext::OnInit(const void *pPersistentData)
 	Console()->ExecuteFile(g_Config.m_SvResetFile, IConsole::CLIENT_ID_UNSPECIFIED);
 
 	g_Config.m_SvKogQquadsEnable = 0;
+	g_Config.m_SvKogQquadsSyncTime = 0;
 	LoadMapSettings();
 	m_MovingFreezeQuadsMapEnabled = g_Config.m_SvKogQquadsEnable != 0;
 
 	m_Collision.InitMovingFreezeQuads(Map(), m_MovingFreezeQuadsMapEnabled);
 	if(m_MovingFreezeQuadsMapEnabled && !m_Collision.HasMovingKogQuads())
 		log_info("kog_qquads", "enabled by map settings but no QFr/QUnFr quads with position envelope found");
+	else if(m_MovingFreezeQuadsMapEnabled && g_Config.m_SvKogQquadsSyncTime > 0)
+		log_info("kog_qquads", "using %d second global envelope sync cycle", g_Config.m_SvKogQquadsSyncTime);
 
 	m_pConfigManager->SetGameSettingsReadOnly(true);
 

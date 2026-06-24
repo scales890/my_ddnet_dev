@@ -117,9 +117,15 @@ bool BoxOverlapsQuad(vec2 Center, vec2 HalfSize, const vec2 aCorners[4])
 	return false;
 }
 
-std::chrono::nanoseconds EnvelopeTimeFromTick(int CurrentTick, int RoundStartTick, int TickSpeed, double IntraTick)
+std::chrono::nanoseconds EnvelopeTimeFromTick(int CurrentTick, int RoundStartTick, int TickSpeed, int SyncTimeSeconds, double IntraTick)
 {
 	const std::chrono::nanoseconds NanosPerTick = std::chrono::nanoseconds(1s) / TickSpeed;
-	const int EnvelopeTick = CurrentTick - RoundStartTick;
+	int EnvelopeTick = CurrentTick - RoundStartTick;
+	if(SyncTimeSeconds > 0)
+	{
+		const int SyncTicks = SyncTimeSeconds * TickSpeed;
+		if(SyncTicks > 0)
+			EnvelopeTick = CurrentTick % SyncTicks;
+	}
 	return EnvelopeTick * NanosPerTick + std::chrono::duration_cast<std::chrono::nanoseconds>(IntraTick * NanosPerTick);
 }

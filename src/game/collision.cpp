@@ -281,9 +281,9 @@ static void ComputeQuadAabb(const vec2 aCorners[4], float &MinX, float &MinY, fl
 	}
 }
 
-void CCollision::SetEnvelopeClock(int RoundStartTick, int CurrentTick, int TickSpeed, double IntraTick)
+void CCollision::SetEnvelopeClock(int RoundStartTick, int CurrentTick, int TickSpeed, int SyncTimeSeconds, double IntraTick)
 {
-	m_EnvelopeTime = EnvelopeTimeFromTick(CurrentTick, RoundStartTick, TickSpeed, IntraTick);
+	m_EnvelopeTime = EnvelopeTimeFromTick(CurrentTick, RoundStartTick, TickSpeed, SyncTimeSeconds, IntraTick);
 	RebuildAnimatedQuadCache();
 }
 
