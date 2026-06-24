@@ -669,12 +669,6 @@ void CCharacter::FireWeapon()
 			MouseTarget // MouseTarget
 		);
 
-		if(g_Config.m_SvKogGrenadeTeleDebug)
-		{
-			log_info("kog_grenade_tele", "cid=%d tick=%d spawned grenade at (%.1f, %.1f) dir=(%.2f, %.2f)",
-				m_pPlayer->GetCid(), Server()->Tick(), ProjStartPos.x, ProjStartPos.y, Direction.x, Direction.y);
-		}
-
 		GameServer()->CreateSound(m_Pos, SOUND_GRENADE_FIRE, TeamMask()); // NOLINT(clang-analyzer-unix.Malloc)
 	}
 	break;

@@ -31,15 +31,3 @@ bool KogGrenadeTeleDisableFullAuto(bool MapEnabled, int ActiveWeapon)
 {
 	return MapEnabled && ActiveWeapon == WEAPON_GRENADE;
 }
-
-const char *KogGrenadeTeleResultName(EKogGrenadeTeleResult Result)
-{
-	switch(Result)
-	{
-	case EKogGrenadeTeleResult::NOT_APPLICABLE: return "not_applicable";
-	case EKogGrenadeTeleResult::ALLOW_FIRE: return "allow_fire";
-	case EKogGrenadeTeleResult::BLOCK_FIRE: return "block_fire";
-	case EKogGrenadeTeleResult::TELEPORT: return "teleport";
-	default: return "unknown";
-	}
-}

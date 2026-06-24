@@ -25,6 +25,5 @@ struct SKogGrenadeTeleInput
 EKogGrenadeTeleResult KogGrenadeTeleEvaluate(const SKogGrenadeTeleInput &Input);
 bool KogGrenadeTeleBlocksWeaponInput(EKogGrenadeTeleResult Result);
 bool KogGrenadeTeleDisableFullAuto(bool MapEnabled, int ActiveWeapon);
-const char *KogGrenadeTeleResultName(EKogGrenadeTeleResult Result);
 
 #endif

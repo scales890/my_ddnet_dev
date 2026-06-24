@@ -7,8 +7,6 @@
 
 #include <engine/shared/config.h>
 
-#include <base/log.h>
-
 #include <generated/client_data.h>
 
 #include <game/collision.h>
@@ -513,12 +511,6 @@ void CCharacter::FireWeapon()
 			true, //Explosive
 			SOUND_GRENADE_EXPLODE //SoundImpact
 		); //SoundImpact
-
-		if(g_Config.m_SvKogGrenadeTeleDebug)
-		{
-			log_info("kog_grenade_tele", "predict cid=%d tick=%d spawned grenade at (%.1f, %.1f) dir=(%.2f, %.2f)",
-				GetCid(), GameWorld()->GameTick(), ProjStartPos.x, ProjStartPos.y, Direction.x, Direction.y);
-		}
 
 		GameWorld()->CreatePredictedSound(m_Pos, SOUND_GRENADE_FIRE, GetCid());
 	}

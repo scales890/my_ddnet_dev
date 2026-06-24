@@ -4484,10 +4484,6 @@ void CGameContext::OnInit(const void *pPersistentData)
 	m_KogGrenadeTeleMapEnabled = g_Config.m_SvKogGrenadeTele != 0;
 
 	m_Collision.InitMovingFreezeQuads(Map(), m_MovingFreezeQuadsMapEnabled, Server()->Tick());
-	if(m_MovingFreezeQuadsMapEnabled && !m_Collision.HasMovingKogQuads())
-		log_info("kog_qquads", "enabled by map settings but no QFr/QUnFr quads with position envelope found");
-	else if(m_MovingFreezeQuadsMapEnabled && m_Collision.HasMovingKogQuads())
-		log_info("kog_qquads", "using map-load global envelope clock");
 
 	m_pConfigManager->SetGameSettingsReadOnly(true);
 

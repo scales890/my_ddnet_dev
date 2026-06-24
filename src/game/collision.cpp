@@ -215,9 +215,6 @@ void CCollision::InitMovingFreezeQuads(IMap *pMap, bool Enabled, int MapLoadTick
 		{
 			InitKogQuadSpatialGrids();
 		}
-		log_info("kog_qquads", "loaded %zu moving freeze quads, %zu moving unfreeze quads%s",
-			m_vMovingFreezeQuads.size(), m_vMovingUnfreezeQuads.size(),
-			m_KogQuadFullMapMode ? " (full-map collision mode)" : "");
 	}
 }
 
@@ -573,14 +570,7 @@ bool CCollision::IntersectMovingQuads(const std::vector<CMovingKogQuad> &vQuads,
 			const float Fraction = Step / (float)Steps;
 			const vec2 Pos = mix(PrevPos, CurPos, Fraction);
 			if(PointInKogQuadsAtEnvelopeTime(Pos, vQuads, vCachedCorners, EnvelopeTime))
-			{
-				if(g_Config.m_SvKogQquadsDebug)
-				{
-					const double TimeMs = EnvelopeTime.count() / (double)std::chrono::nanoseconds(1ms).count();
-					log_info("kog_qquads", "freeze hit at envelope %.3f ms", TimeMs);
-				}
 				return true;
-			}
 		}
 		return false;
 	}
