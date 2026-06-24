@@ -601,7 +601,6 @@ void IGameController::Tick()
 	}
 
 	DoActivityCheck();
-	TickEnvelopeSync();
 }
 
 int IGameController::SnapEnvelopeRoundStartTick(int SnappingClient) const
@@ -621,33 +620,6 @@ int IGameController::SnapEnvelopeRoundStartTick(int SnappingClient) const
 	if(AnchorTick >= 0)
 		return AnchorTick - LagTicks;
 	return m_RoundStartTick - LagTicks;
-}
-
-void IGameController::UpdatePlayerEnvelopeRoundStart(int ClientId)
-{
-	(void)ClientId;
-}
-
-void IGameController::OnPlayerEnvelopeRaceStart(int ClientId)
-{
-	(void)ClientId;
-}
-
-void IGameController::ClearPlayerEnvelopeRoundStart(int ClientId)
-{
-	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
-		return;
-
-	CPlayer *pPlayer = GameServer()->m_apPlayers[ClientId];
-	if(pPlayer)
-	{
-		pPlayer->m_EnvelopeRoundStartTick = -1;
-		pPlayer->m_EnvelopeLastResyncTick = -1;
-	}
-}
-
-void IGameController::TickEnvelopeSync()
-{
 }
 
 void IGameController::Snap(int SnappingClient)

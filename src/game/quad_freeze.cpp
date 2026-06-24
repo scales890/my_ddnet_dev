@@ -94,34 +94,6 @@ bool PointInQuadAabb(vec2 Point, float MinX, float MinY, float MaxX, float MaxY)
 	return Point.x >= MinX && Point.x <= MaxX && Point.y >= MinY && Point.y <= MaxY;
 }
 
-bool BoxOverlapsQuad(vec2 Center, vec2 HalfSize, const vec2 aCorners[4])
-{
-	if(PointInQuad(Center, aCorners))
-		return true;
-
-	const vec2 aBoxPoints[4] = {
-		Center + vec2(-HalfSize.x, -HalfSize.y),
-		Center + vec2(HalfSize.x, -HalfSize.y),
-		Center + vec2(HalfSize.x, HalfSize.y),
-		Center + vec2(-HalfSize.x, HalfSize.y),
-	};
-
-	for(const vec2 &Point : aBoxPoints)
-	{
-		if(PointInQuad(Point, aCorners))
-			return true;
-	}
-
-	for(int i = 0; i < 4; i++)
-	{
-		const vec2 &Corner = aCorners[i];
-		if(std::abs(Corner.x - Center.x) <= HalfSize.x && std::abs(Corner.y - Center.y) <= HalfSize.y)
-			return true;
-	}
-
-	return false;
-}
-
 std::chrono::nanoseconds GetQuadPositionEnvelopeMaxTime(const CQuad &Quad, IMap *pMap, CMapBasedEnvelopePointAccess &EnvelopePoints)
 {
 	if(Quad.m_PosEnv < 0 || !pMap)

@@ -97,7 +97,6 @@ void CGameTeams::OnCharacterStart(int ClientId)
 		m_aTeeStarted[ClientId] = true;
 		pStartingChar->m_DDRaceState = ERaceState::STARTED;
 		pStartingChar->m_StartTime = Tick;
-		GameServer()->m_pController->OnPlayerEnvelopeRaceStart(ClientId);
 		return;
 	}
 	bool Waiting = false;
@@ -638,13 +637,7 @@ void CGameTeams::SetDDRaceState(CPlayer *Player, ERaceState DDRaceState)
 
 	CCharacter *pChar = Player->GetCharacter();
 	if(pChar)
-	{
 		pChar->m_DDRaceState = DDRaceState;
-		if(DDRaceState == ERaceState::STARTED)
-			GameServer()->m_pController->OnPlayerEnvelopeRaceStart(Player->GetCid());
-		else
-			GameServer()->m_pController->ClearPlayerEnvelopeRoundStart(Player->GetCid());
-	}
 }
 
 int CGameTeams::GetStartTime(CPlayer *Player)

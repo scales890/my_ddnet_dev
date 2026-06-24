@@ -30,8 +30,6 @@ std::chrono::nanoseconds GetQuadPositionEnvelopeMaxTime(const CQuad &Quad, IMap 
 bool PointInQuad(vec2 Point, const vec2 aCorners[4]);
 bool PointInQuadAabb(vec2 Point, float MinX, float MinY, float MaxX, float MaxY);
 
-bool BoxOverlapsQuad(vec2 Center, vec2 HalfSize, const vec2 aCorners[4]);
-
 std::chrono::nanoseconds EnvelopeTimeFromTick(int CurrentTick, int SyncAnchorTick, int TickSpeed, double IntraTick = 0.0);
 
 #endif

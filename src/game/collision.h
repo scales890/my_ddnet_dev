@@ -156,7 +156,7 @@ public:
 	bool HasMovingUnfreezeQuads() const { return !m_vMovingUnfreezeQuads.empty(); }
 	bool HasMovingKogQuads() const { return HasMovingFreezeQuads() || HasMovingUnfreezeQuads(); }
 	int KogQuadSyncAnchorTick() const { return m_EnvelopeSyncAnchorTick; }
-	void SetEnvelopeClock(int CurrentTick, int TickSpeed, double IntraTick = 0.0);
+	void SetEnvelopeClock(int CurrentTick, int TickSpeed);
 	bool IntersectMovingFreeze(vec2 PrevPos, vec2 CurPos, vec2 BoxSize) const;
 	bool PointInMovingFreeze(vec2 Pos, vec2 BoxSize) const;
 	bool IntersectMovingUnfreeze(vec2 PrevPos, vec2 CurPos, vec2 BoxSize) const;
@@ -186,11 +186,10 @@ private:
 	void RebuildAnimatedQuadCache();
 	void RebuildKogQuadSpatialGrids();
 	std::chrono::nanoseconds MovingKogEnvelopeTimeAt(double IntraTick) const;
-	void BuildMovingKogEnvelopeSampleTimes(std::vector<std::chrono::nanoseconds> &vTimes) const;
 	bool PointInKogQuadAt(vec2 Pos, const CQuad &Quad, const CAnimatedQuadCorners &Cached, std::chrono::nanoseconds EnvelopeTime) const;
 	void QueryKogQuadGrid(const std::vector<std::vector<int>> &Grid, float MinX, float MinY, float MaxX, float MaxY, size_t NumQuads, std::vector<uint32_t> &Visited, int &Generation) const;
-	void CollectKogQuadCandidates(const std::vector<CAnimatedQuadCorners> &vCachedCorners, const std::vector<std::vector<int>> &Grid, float QueryMinX, float QueryMinY, float QueryMaxX, float QueryMaxY, std::vector<uint32_t> &Visited, int &Generation, std::vector<int> &vCandidateIndices) const;
-	bool PointInKogQuadsAtEnvelopeTime(vec2 Pos, const std::vector<CMovingKogQuad> &vQuads, const std::vector<CAnimatedQuadCorners> &vCachedCorners, const std::vector<int> &vCandidateIndices, std::chrono::nanoseconds EnvelopeTime) const;
+	void CollectKogQuadCandidates(const std::vector<CAnimatedQuadCorners> &vCachedCorners, const std::vector<std::vector<int>> &Grid, size_t NumQuads, float QueryMinX, float QueryMinY, float QueryMaxX, float QueryMaxY, std::vector<uint32_t> &Visited, int &Generation) const;
+	bool PointInKogQuadsAtEnvelopeTime(vec2 Pos, const std::vector<CMovingKogQuad> &vQuads, const std::vector<CAnimatedQuadCorners> &vCachedCorners, std::chrono::nanoseconds EnvelopeTime) const;
 	bool TestMovingQuadsAt(const std::vector<CMovingKogQuad> &vQuads, const std::vector<CAnimatedQuadCorners> &vCachedCorners, const std::vector<std::vector<int>> &Grid, vec2 Pos, vec2 BoxSize, std::vector<uint32_t> &Visited, int &Generation) const;
 	bool TestMovingFreezeAt(vec2 Pos, vec2 BoxSize) const;
 	bool TestMovingUnfreezeAt(vec2 Pos, vec2 BoxSize) const;
@@ -212,7 +211,6 @@ private:
 	mutable std::vector<int> m_vKogQuadQueryCandidates;
 	std::unique_ptr<class CMapBasedEnvelopePointAccess> m_pEnvelopePoints;
 	IMap *m_pMapForEnvelopes;
-	std::chrono::nanoseconds m_EnvelopeTime;
 	int m_EnvelopeCurrentTick;
 	int m_EnvelopeTickSpeed;
 	bool m_KogQuadFullMapMode;

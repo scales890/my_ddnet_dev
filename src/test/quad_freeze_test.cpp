@@ -36,19 +36,6 @@ TEST(QuadFreeze, PointInMapStorageOrderQuad)
 	EXPECT_TRUE(PointInQuad(vec2(16.0f, 16.0f), aConvex));
 }
 
-TEST(QuadFreeze, BoxOverlapsQuad)
-{
-	const vec2 aCorners[4] = {
-		vec2(0.0f, 0.0f),
-		vec2(32.0f, 0.0f),
-		vec2(32.0f, 32.0f),
-		vec2(0.0f, 32.0f),
-	};
-
-	EXPECT_TRUE(BoxOverlapsQuad(vec2(16.0f, 16.0f), vec2(14.0f, 14.0f), aCorners));
-	EXPECT_FALSE(BoxOverlapsQuad(vec2(64.0f, 64.0f), vec2(14.0f, 14.0f), aCorners));
-}
-
 TEST(QuadFreeze, MovingKogQuadLayerTypeFromName)
 {
 	EXPECT_EQ(MovingKogQuadLayerTypeFromName(""), EMovingKogQuadLayerType::NONE);

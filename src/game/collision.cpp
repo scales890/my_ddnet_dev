@@ -50,7 +50,6 @@ CCollision::CCollision()
 {
 	m_pDoor = nullptr;
 	m_pMapForEnvelopes = nullptr;
-	m_EnvelopeTime = std::chrono::nanoseconds::zero();
 	m_KogQuadGridCellSize = KOG_QUAD_GRID_CELL_SIZE;
 	m_KogQuadGridWidthCells = 0;
 	m_KogQuadGridHeightCells = 0;
@@ -189,7 +188,6 @@ void CCollision::UnloadMovingFreezeQuads()
 	m_KogQuadFullMapMode = false;
 	m_pEnvelopePoints.reset();
 	m_pMapForEnvelopes = nullptr;
-	m_EnvelopeTime = std::chrono::nanoseconds::zero();
 	m_EnvelopeCurrentTick = 0;
 	m_EnvelopeTickSpeed = 50;
 	m_EnvelopeSyncAnchorTick = -1;
@@ -208,7 +206,15 @@ void CCollision::InitMovingFreezeQuads(IMap *pMap, bool Enabled, int MapLoadTick
 	DetectKogQuadFullMapMode();
 	if(!m_vMovingFreezeQuads.empty() || !m_vMovingUnfreezeQuads.empty())
 	{
-		InitKogQuadSpatialGrids();
+		if(m_KogQuadFullMapMode)
+		{
+			m_vCachedFreezeCorners.resize(m_vMovingFreezeQuads.size());
+			m_vCachedUnfreezeCorners.resize(m_vMovingUnfreezeQuads.size());
+		}
+		else
+		{
+			InitKogQuadSpatialGrids();
+		}
 		log_info("kog_qquads", "loaded %zu moving freeze quads, %zu moving unfreeze quads%s",
 			m_vMovingFreezeQuads.size(), m_vMovingUnfreezeQuads.size(),
 			m_KogQuadFullMapMode ? " (full-map collision mode)" : "");
@@ -339,23 +345,16 @@ void CCollision::InitKogQuadSpatialGrids()
 	m_vUnfreezeQuadGrid.assign(NumCells, {});
 }
 
-void CCollision::SetEnvelopeClock(int CurrentTick, int TickSpeed, double IntraTick)
+void CCollision::SetEnvelopeClock(int CurrentTick, int TickSpeed)
 {
 	m_EnvelopeCurrentTick = CurrentTick;
 	m_EnvelopeTickSpeed = TickSpeed;
-	m_EnvelopeTime = EnvelopeTimeFromTick(CurrentTick, m_EnvelopeSyncAnchorTick, TickSpeed, IntraTick);
 	RebuildAnimatedQuadCache();
 }
 
 std::chrono::nanoseconds CCollision::MovingKogEnvelopeTimeAt(double IntraTick) const
 {
 	return EnvelopeTimeFromTick(m_EnvelopeCurrentTick, m_EnvelopeSyncAnchorTick, m_EnvelopeTickSpeed, IntraTick);
-}
-
-void CCollision::BuildMovingKogEnvelopeSampleTimes(std::vector<std::chrono::nanoseconds> &vTimes) const
-{
-	vTimes.clear();
-	vTimes.push_back(MovingKogEnvelopeTimeAt(KOG_QUAD_ENVELOPE_INTRA_SAMPLE));
 }
 
 bool CCollision::PointInKogQuadAt(vec2 Pos, const CQuad &Quad, const CAnimatedQuadCorners &Cached, std::chrono::nanoseconds EnvelopeTime) const
@@ -365,6 +364,7 @@ bool CCollision::PointInKogQuadAt(vec2 Pos, const CQuad &Quad, const CAnimatedQu
 
 	if(m_KogQuadFullMapMode)
 	{
+		(void)Cached;
 		vec2 aCorners[4];
 		GetAnimatedQuadCorners(Quad, m_pMapForEnvelopes, *m_pEnvelopePoints, EnvelopeTime, aCorners);
 		float MinX, MinY, MaxX, MaxY;
@@ -377,28 +377,24 @@ bool CCollision::PointInKogQuadAt(vec2 Pos, const CQuad &Quad, const CAnimatedQu
 
 void CCollision::RebuildAnimatedQuadCache()
 {
+	if(m_KogQuadFullMapMode)
+		return;
+
 	m_vCachedFreezeCorners.clear();
 	m_vCachedUnfreezeCorners.clear();
 
 	if(!m_pEnvelopePoints || !m_pMapForEnvelopes)
 		return;
 
+	const auto SampleTime = MovingKogEnvelopeTimeAt(KOG_QUAD_ENVELOPE_INTRA_SAMPLE);
+
 	auto RebuildOneCache = [&](const std::vector<CMovingKogQuad> &vQuads, std::vector<CAnimatedQuadCorners> &vCached) {
-		vCached.reserve(vQuads.size());
-		const auto SampleTime = MovingKogEnvelopeTimeAt(KOG_QUAD_ENVELOPE_INTRA_SAMPLE);
-		for(const CMovingKogQuad &KogQuad : vQuads)
+		vCached.resize(vQuads.size());
+		for(size_t i = 0; i < vQuads.size(); i++)
 		{
-			CAnimatedQuadCorners Cached;
-			GetAnimatedQuadCorners(*KogQuad.m_pQuad, m_pMapForEnvelopes, *m_pEnvelopePoints, SampleTime, Cached.m_aCorners);
+			CAnimatedQuadCorners &Cached = vCached[i];
+			GetAnimatedQuadCorners(*vQuads[i].m_pQuad, m_pMapForEnvelopes, *m_pEnvelopePoints, SampleTime, Cached.m_aCorners);
 			ComputeQuadAabb(Cached.m_aCorners, Cached.m_MinX, Cached.m_MinY, Cached.m_MaxX, Cached.m_MaxY);
-			if(!m_KogQuadFullMapMode && m_Width > 0 && m_Height > 0)
-			{
-				const float ThresholdW = (float)m_Width * 32.0f * 0.5f;
-				const float ThresholdH = (float)m_Height * 32.0f * 0.5f;
-				if(Cached.m_MaxX - Cached.m_MinX >= ThresholdW || Cached.m_MaxY - Cached.m_MinY >= ThresholdH)
-					m_KogQuadFullMapMode = true;
-			}
-			vCached.push_back(Cached);
 		}
 	};
 
@@ -481,28 +477,27 @@ void CCollision::QueryKogQuadGrid(const std::vector<std::vector<int>> &Grid, flo
 	}
 }
 
-void CCollision::CollectKogQuadCandidates(const std::vector<CAnimatedQuadCorners> &vCachedCorners, const std::vector<std::vector<int>> &Grid, float QueryMinX, float QueryMinY, float QueryMaxX, float QueryMaxY, std::vector<uint32_t> &Visited, int &Generation, std::vector<int> &vCandidateIndices) const
+void CCollision::CollectKogQuadCandidates(const std::vector<CAnimatedQuadCorners> &vCachedCorners, const std::vector<std::vector<int>> &Grid, size_t NumQuads, float QueryMinX, float QueryMinY, float QueryMaxX, float QueryMaxY, std::vector<uint32_t> &Visited, int &Generation) const
 {
-	vCandidateIndices.clear();
+	m_vKogQuadQueryCandidates.clear();
 	const bool UseSpatialGrid = !m_KogQuadFullMapMode && m_KogQuadGridWidthCells > 0 && !Grid.empty();
 	if(UseSpatialGrid)
 	{
-		QueryKogQuadGrid(Grid, QueryMinX, QueryMinY, QueryMaxX, QueryMaxY, vCachedCorners.size(), Visited, Generation);
-		vCandidateIndices = m_vKogQuadQueryCandidates;
+		QueryKogQuadGrid(Grid, QueryMinX, QueryMinY, QueryMaxX, QueryMaxY, NumQuads, Visited, Generation);
 		return;
 	}
 
-	vCandidateIndices.reserve(vCachedCorners.size());
-	for(size_t i = 0; i < vCachedCorners.size(); i++)
-		vCandidateIndices.push_back((int)i);
+	m_vKogQuadQueryCandidates.reserve(NumQuads);
+	for(size_t i = 0; i < NumQuads; i++)
+		m_vKogQuadQueryCandidates.push_back((int)i);
 }
 
-bool CCollision::PointInKogQuadsAtEnvelopeTime(vec2 Pos, const std::vector<CMovingKogQuad> &vQuads, const std::vector<CAnimatedQuadCorners> &vCachedCorners, const std::vector<int> &vCandidateIndices, std::chrono::nanoseconds EnvelopeTime) const
+bool CCollision::PointInKogQuadsAtEnvelopeTime(vec2 Pos, const std::vector<CMovingKogQuad> &vQuads, const std::vector<CAnimatedQuadCorners> &vCachedCorners, std::chrono::nanoseconds EnvelopeTime) const
 {
-	if(vCandidateIndices.empty())
+	if(m_vKogQuadQueryCandidates.empty())
 		return false;
 
-	for(int Index : vCandidateIndices)
+	for(int Index : m_vKogQuadQueryCandidates)
 	{
 		if((size_t)Index >= vQuads.size() || (size_t)Index >= vCachedCorners.size())
 			continue;
@@ -514,39 +509,30 @@ bool CCollision::PointInKogQuadsAtEnvelopeTime(vec2 Pos, const std::vector<CMovi
 
 bool CCollision::TestMovingQuadsAt(const std::vector<CMovingKogQuad> &vQuads, const std::vector<CAnimatedQuadCorners> &vCachedCorners, const std::vector<std::vector<int>> &Grid, vec2 Pos, vec2 BoxSize, std::vector<uint32_t> &Visited, int &Generation) const
 {
-	if(vCachedCorners.empty())
+	if(vQuads.empty())
+		return false;
+	if(!m_KogQuadFullMapMode && vCachedCorners.empty())
 		return false;
 
-	std::vector<std::chrono::nanoseconds> vEnvelopeTimes;
-	BuildMovingKogEnvelopeSampleTimes(vEnvelopeTimes);
 	const vec2 HalfSize = BoxSize * 0.5f;
-
-	auto TestCandidates = [&](const std::vector<int> &vCandidateIndices) {
-		if(!m_KogQuadFullMapMode)
-		{
-			for(int Index : vCandidateIndices)
-			{
-				if((size_t)Index >= vCachedCorners.size())
-					continue;
-				if(PointInQuad(Pos, vCachedCorners[Index].m_aCorners))
-					return true;
-			}
-			return false;
-		}
-
-		for(const auto &EnvelopeTime : vEnvelopeTimes)
-		{
-			if(PointInKogQuadsAtEnvelopeTime(Pos, vQuads, vCachedCorners, vCandidateIndices, EnvelopeTime))
-				return true;
-		}
+	CollectKogQuadCandidates(vCachedCorners, Grid, vQuads.size(), Pos.x - HalfSize.x, Pos.y - HalfSize.y, Pos.x + HalfSize.x, Pos.y + HalfSize.y, Visited, Generation);
+	if(m_vKogQuadQueryCandidates.empty())
 		return false;
-	};
 
-	std::vector<int> vCandidateIndices;
-	CollectKogQuadCandidates(vCachedCorners, Grid, Pos.x - HalfSize.x, Pos.y - HalfSize.y, Pos.x + HalfSize.x, Pos.y + HalfSize.y, Visited, Generation, vCandidateIndices);
-	if(vCandidateIndices.empty())
-		return false;
-	return TestCandidates(vCandidateIndices);
+	if(m_KogQuadFullMapMode)
+	{
+		const auto EnvelopeTime = MovingKogEnvelopeTimeAt(KOG_QUAD_ENVELOPE_INTRA_SAMPLE);
+		return PointInKogQuadsAtEnvelopeTime(Pos, vQuads, vCachedCorners, EnvelopeTime);
+	}
+
+	for(int Index : m_vKogQuadQueryCandidates)
+	{
+		if((size_t)Index >= vCachedCorners.size())
+			continue;
+		if(PointInQuad(Pos, vCachedCorners[Index].m_aCorners))
+			return true;
+	}
+	return false;
 }
 
 bool CCollision::TestMovingFreezeAt(vec2 Pos, vec2 BoxSize) const
@@ -561,49 +547,32 @@ bool CCollision::TestMovingUnfreezeAt(vec2 Pos, vec2 BoxSize) const
 
 bool CCollision::IntersectMovingQuads(const std::vector<CMovingKogQuad> &vQuads, const std::vector<CAnimatedQuadCorners> &vCachedCorners, const std::vector<std::vector<int>> &Grid, vec2 PrevPos, vec2 CurPos, vec2 BoxSize, std::vector<uint32_t> &Visited, int &Generation) const
 {
-	if(vCachedCorners.empty())
+	if(vQuads.empty())
+		return false;
+	if(!m_KogQuadFullMapMode && vCachedCorners.empty())
 		return false;
 
-	std::vector<std::chrono::nanoseconds> vEnvelopeTimes;
-	BuildMovingKogEnvelopeSampleTimes(vEnvelopeTimes);
 	const vec2 HalfSize = BoxSize * 0.5f;
 	const vec2 Delta = CurPos - PrevPos;
 	const float Distance = length(Delta);
 	const int Steps = std::max(1, (int)(Distance / 4.0f) + 1);
 
-	std::vector<int> vCandidateIndices;
 	const float MinX = std::min(PrevPos.x, CurPos.x) - HalfSize.x;
 	const float MinY = std::min(PrevPos.y, CurPos.y) - HalfSize.y;
 	const float MaxX = std::max(PrevPos.x, CurPos.x) + HalfSize.x;
 	const float MaxY = std::max(PrevPos.y, CurPos.y) + HalfSize.y;
-	CollectKogQuadCandidates(vCachedCorners, Grid, MinX, MinY, MaxX, MaxY, Visited, Generation, vCandidateIndices);
-	if(vCandidateIndices.empty())
+	CollectKogQuadCandidates(vCachedCorners, Grid, vQuads.size(), MinX, MinY, MaxX, MaxY, Visited, Generation);
+	if(m_vKogQuadQueryCandidates.empty())
 		return false;
 
-	if(!m_KogQuadFullMapMode)
+	if(m_KogQuadFullMapMode)
 	{
+		const auto EnvelopeTime = MovingKogEnvelopeTimeAt(KOG_QUAD_ENVELOPE_INTRA_SAMPLE);
 		for(int Step = 0; Step <= Steps; Step++)
 		{
 			const float Fraction = Step / (float)Steps;
 			const vec2 Pos = mix(PrevPos, CurPos, Fraction);
-			for(int Index : vCandidateIndices)
-			{
-				if((size_t)Index >= vCachedCorners.size())
-					continue;
-				if(PointInQuad(Pos, vCachedCorners[Index].m_aCorners))
-					return true;
-			}
-		}
-		return false;
-	}
-
-	for(const auto &EnvelopeTime : vEnvelopeTimes)
-	{
-		for(int Step = 0; Step <= Steps; Step++)
-		{
-			const float Fraction = Step / (float)Steps;
-			const vec2 Pos = mix(PrevPos, CurPos, Fraction);
-			if(PointInKogQuadsAtEnvelopeTime(Pos, vQuads, vCachedCorners, vCandidateIndices, EnvelopeTime))
+			if(PointInKogQuadsAtEnvelopeTime(Pos, vQuads, vCachedCorners, EnvelopeTime))
 			{
 				if(g_Config.m_SvKogQquadsDebug)
 				{
@@ -612,6 +581,20 @@ bool CCollision::IntersectMovingQuads(const std::vector<CMovingKogQuad> &vQuads,
 				}
 				return true;
 			}
+		}
+		return false;
+	}
+
+	for(int Step = 0; Step <= Steps; Step++)
+	{
+		const float Fraction = Step / (float)Steps;
+		const vec2 Pos = mix(PrevPos, CurPos, Fraction);
+		for(int Index : m_vKogQuadQueryCandidates)
+		{
+			if((size_t)Index >= vCachedCorners.size())
+				continue;
+			if(PointInQuad(Pos, vCachedCorners[Index].m_aCorners))
+				return true;
 		}
 	}
 	return false;
