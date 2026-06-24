@@ -1,7 +1,7 @@
 #include "quad_freeze.h"
 
 #include <base/math.h>
-#include <base/system.h>
+#include <base/str.h>
 
 #include <engine/map.h>
 
