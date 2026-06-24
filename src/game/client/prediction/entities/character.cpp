@@ -277,6 +277,7 @@ static bool HandleKogGrenadeTeleBeforeFire(CCharacter *pChr)
 
 	CProjectile *pGrenade = FindOwnedLiveGrenade(pChr->GameWorld(), pChr->GetCid());
 	const bool Press = CountInput(pChr->m_LatestPrevInput.m_Fire, pChr->m_LatestInput.m_Fire).m_Presses != 0;
+	const bool FireHeld = (pChr->m_LatestInput.m_Fire & 1) != 0;
 
 	if(Press && !pChr->m_FreezeTime)
 	{
@@ -304,6 +305,9 @@ static bool HandleKogGrenadeTeleBeforeFire(CCharacter *pChr)
 	if(pGrenade)
 		return true;
 
+	if(FireHeld && !Press)
+		return true;
+
 	return false;
 }
 
@@ -327,12 +331,12 @@ void CCharacter::FireWeapon()
 	bool FullAuto = false;
 	if(m_Core.m_ActiveWeapon == WEAPON_GRENADE || m_Core.m_ActiveWeapon == WEAPON_SHOTGUN || m_Core.m_ActiveWeapon == WEAPON_LASER)
 		FullAuto = true;
-	if(g_Config.m_SvKogGrenadeTele && m_Core.m_ActiveWeapon == WEAPON_GRENADE)
-		FullAuto = false;
 	if(m_Core.m_Jetpack && m_Core.m_ActiveWeapon == WEAPON_GUN)
 		FullAuto = true;
 	if(m_FrozenLastTick)
 		FullAuto = true;
+	if(g_Config.m_SvKogGrenadeTele && m_Core.m_ActiveWeapon == WEAPON_GRENADE)
+		FullAuto = false;
 
 	// don't fire hammer when player is deep and sv_deepfly is disabled
 	if(!g_Config.m_SvDeepfly && m_Core.m_ActiveWeapon == WEAPON_HAMMER && m_Core.m_DeepFrozen)
@@ -345,6 +349,9 @@ void CCharacter::FireWeapon()
 
 	if(FullAuto && (m_LatestInput.m_Fire & 1) && m_Core.m_ActiveWeapon >= 0 && m_Core.m_aWeapons[m_Core.m_ActiveWeapon].m_Ammo)
 		WillFire = true;
+
+	if(g_Config.m_SvKogGrenadeTele && m_Core.m_ActiveWeapon == WEAPON_GRENADE && !CountInput(m_LatestPrevInput.m_Fire, m_LatestInput.m_Fire).m_Presses)
+		WillFire = false;
 
 	if(!WillFire)
 		return;

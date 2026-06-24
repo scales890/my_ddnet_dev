@@ -487,6 +487,7 @@ bool CCharacter::HandleKogGrenadeTeleBeforeFire()
 
 	CProjectile *pGrenade = FindOwnedLiveGrenade(GameWorld(), m_pPlayer->GetCid());
 	const bool Press = CountInput(m_LatestPrevInput.m_Fire, m_LatestInput.m_Fire).m_Presses != 0;
+	const bool FireHeld = (m_LatestInput.m_Fire & 1) != 0;
 
 	if(Press && !m_FreezeTime)
 	{
@@ -502,8 +503,11 @@ bool CCharacter::HandleKogGrenadeTeleBeforeFire()
 	if(m_KogGrenadeTeleTriggered)
 		return true;
 
-	// Own grenade still in flight: never spawn another (blocks FullAuto while held).
 	if(pGrenade)
+		return true;
+
+	// Only a new click may fire the first grenade; holding never does.
+	if(FireHeld && !Press)
 		return true;
 
 	return false;
@@ -530,14 +534,14 @@ void CCharacter::FireWeapon()
 	bool FullAuto = false;
 	if(m_Core.m_ActiveWeapon == WEAPON_GRENADE || m_Core.m_ActiveWeapon == WEAPON_SHOTGUN || m_Core.m_ActiveWeapon == WEAPON_LASER)
 		FullAuto = true;
-	if(GameServer()->KogGrenadeTeleMapEnabled() && m_Core.m_ActiveWeapon == WEAPON_GRENADE)
-		FullAuto = false;
 	if(m_Core.m_Jetpack && m_Core.m_ActiveWeapon == WEAPON_GUN)
 		FullAuto = true;
 	// allow firing directly after coming out of freeze or being unfrozen
 	// by something
 	if(m_FrozenLastTick)
 		FullAuto = true;
+	if(GameServer()->KogGrenadeTeleMapEnabled() && m_Core.m_ActiveWeapon == WEAPON_GRENADE)
+		FullAuto = false;
 
 	// don't fire hammer when player is deep and sv_deepfly is disabled
 	if(!g_Config.m_SvDeepfly && m_Core.m_ActiveWeapon == WEAPON_HAMMER && m_Core.m_DeepFrozen)
@@ -550,6 +554,9 @@ void CCharacter::FireWeapon()
 
 	if(FullAuto && (m_LatestInput.m_Fire & 1) && m_Core.m_ActiveWeapon >= 0 && m_Core.m_aWeapons[m_Core.m_ActiveWeapon].m_Ammo)
 		WillFire = true;
+
+	if(GameServer()->KogGrenadeTeleMapEnabled() && m_Core.m_ActiveWeapon == WEAPON_GRENADE && !CountInput(m_LatestPrevInput.m_Fire, m_LatestInput.m_Fire).m_Presses)
+		WillFire = false;
 
 	if(!WillFire)
 		return;
