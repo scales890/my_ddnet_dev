@@ -268,8 +268,19 @@ static CProjectile *FindOwnedLiveGrenade(CGameWorld *pWorld, int OwnerId)
 	return pBest;
 }
 
-static bool TryKogGrenadeTeleport(CCharacter *pChr)
+static bool HandleKogGrenadeTeleOnPress(CCharacter *pChr)
 {
+	if(!g_Config.m_SvKogGrenadeTele)
+		return false;
+	if(pChr->m_Core.m_ActiveWeapon != WEAPON_GRENADE)
+		return false;
+	if(!CountInput(pChr->m_LatestPrevInput.m_Fire, pChr->m_LatestInput.m_Fire).m_Presses)
+		return false;
+	if(pChr->m_FreezeTime)
+		return false;
+	if(pChr->m_KogGrenadeTeleTriggered)
+		return true;
+
 	CProjectile *pGrenade = FindOwnedLiveGrenade(pChr->GameWorld(), pChr->GetCid());
 	if(!pGrenade)
 		return false;
@@ -279,8 +290,10 @@ static bool TryKogGrenadeTeleport(CCharacter *pChr)
 
 	pChr->m_Core.m_Pos = TelePos;
 	pChr->m_Pos = TelePos;
+	pChr->m_PrevPos = TelePos;
 	pChr->m_Core.m_Vel = vec2(0, 0);
 	pGrenade->Remove();
+	pChr->m_KogGrenadeTeleTriggered = true;
 	pChr->GameWorld()->CreatePredictedSound(TelePos, SOUND_WEAPON_SPAWN, pChr->GetCid());
 	return true;
 }
@@ -293,11 +306,7 @@ void CCharacter::FireWeapon()
 	if(!GameWorld()->m_WorldConfig.m_PredictWeapons)
 		return;
 
-	if(g_Config.m_SvKogGrenadeTele &&
-		m_Core.m_ActiveWeapon == WEAPON_GRENADE &&
-		CountInput(m_LatestPrevInput.m_Fire, m_LatestInput.m_Fire).m_Presses &&
-		!m_FreezeTime &&
-		TryKogGrenadeTeleport(this))
+	if(HandleKogGrenadeTeleOnPress(this))
 		return;
 
 	if(m_ReloadTimer != 0)
@@ -546,6 +555,9 @@ void CCharacter::HandleWeapons()
 	if(m_PainSoundTimer > 0)
 		m_PainSoundTimer--;
 
+	if(HandleKogGrenadeTeleOnPress(this))
+		return;
+
 	// check reload timer
 	if(m_ReloadTimer)
 	{
@@ -674,6 +686,7 @@ void CCharacter::Tick()
 
 	m_PrevPrevPos = m_PrevPos;
 	m_PrevPos = m_Core.m_Pos;
+	m_KogGrenadeTeleTriggered = false;
 }
 
 void CCharacter::TickDeferred()
@@ -1329,6 +1342,7 @@ CCharacter::CCharacter(CGameWorld *pGameWorld, int Id, CNetObj_Character *pChar,
 	m_NumObjectsHit = 0;
 	m_LastRefillJumps = false;
 	m_CanMoveInFreeze = false;
+	m_KogGrenadeTeleTriggered = false;
 	m_TeleCheckpoint = 0;
 	m_StrongWeakId = 0;
 
@@ -1377,6 +1391,7 @@ void CCharacter::ResetPrediction()
 	}
 	m_LastWeaponSwitchTick = 0;
 	m_LastTuneZoneTick = 0;
+	m_KogGrenadeTeleTriggered = false;
 }
 
 void CCharacter::Read(CNetObj_Character *pChar, CNetObj_DDNetCharacter *pExtended, bool IsLocal)

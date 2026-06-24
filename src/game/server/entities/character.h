@@ -76,6 +76,7 @@ public:
 	void ResetInput();
 	void FireWeapon();
 	bool TryKogGrenadeTeleport();
+	bool HandleKogGrenadeTeleOnPress();
 
 	void Die(int Killer, int Weapon, bool SendKillMsg = true);
 	bool TakeDamage(vec2 Force, int Dmg, int From, int Weapon);
@@ -236,6 +237,7 @@ public:
 	vec2 m_TeleGunPos;
 	bool m_TeleGunTeleport;
 	bool m_IsBlueTeleGunTeleport;
+	bool m_KogGrenadeTeleTriggered;
 	int m_StrongWeakId;
 
 	int m_SpawnTick;

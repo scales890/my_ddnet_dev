@@ -69,6 +69,7 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 
 	m_TeleGunTeleport = false;
 	m_IsBlueTeleGunTeleport = false;
+	m_KogGrenadeTeleTriggered = false;
 
 	m_pPlayer = pPlayer;
 	m_Pos = Pos;
@@ -469,23 +470,35 @@ bool CCharacter::TryKogGrenadeTeleport()
 	vec2 TelePos = GrenadePos;
 	GetNearestAirPosPlayer(GrenadePos, &TelePos);
 
-	GameServer()->CreateDeath(m_Pos, m_pPlayer->GetCid(), TeamMask());
-	m_Core.m_Pos = TelePos;
-	m_Pos = TelePos;
-	m_Core.m_Vel = vec2(0, 0);
-	GameServer()->CreateDeath(TelePos, m_pPlayer->GetCid(), TeamMask());
-	GameServer()->CreateSound(TelePos, SOUND_WEAPON_SPAWN, TeamMask());
+	m_TeleGunPos = TelePos;
+	m_TeleGunTeleport = true;
+	m_IsBlueTeleGunTeleport = false;
+	m_KogGrenadeTeleTriggered = true;
 	pGrenade->Reset();
+	return true;
+}
+
+bool CCharacter::HandleKogGrenadeTeleOnPress()
+{
+	if(!GameServer()->KogGrenadeTeleMapEnabled())
+		return false;
+	if(m_Core.m_ActiveWeapon != WEAPON_GRENADE)
+		return false;
+	if(!CountInput(m_LatestPrevInput.m_Fire, m_LatestInput.m_Fire).m_Presses)
+		return false;
+	if(m_FreezeTime)
+		return false;
+	if(m_KogGrenadeTeleTriggered)
+		return true;
+	if(!FindOwnedLiveGrenade(GameWorld(), m_pPlayer->GetCid()))
+		return false;
+	TryKogGrenadeTeleport();
 	return true;
 }
 
 void CCharacter::FireWeapon()
 {
-	if(GameServer()->KogGrenadeTeleMapEnabled() &&
-		m_Core.m_ActiveWeapon == WEAPON_GRENADE &&
-		CountInput(m_LatestPrevInput.m_Fire, m_LatestInput.m_Fire).m_Presses &&
-		!m_FreezeTime &&
-		TryKogGrenadeTeleport())
+	if(HandleKogGrenadeTeleOnPress())
 		return;
 
 	if(m_ReloadTimer != 0)
@@ -698,6 +711,9 @@ void CCharacter::HandleWeapons()
 	if(m_PainSoundTimer > 0)
 		m_PainSoundTimer--;
 
+	if(HandleKogGrenadeTeleOnPress())
+		return;
+
 	// check reload timer
 	if(m_ReloadTimer)
 	{
@@ -886,6 +902,7 @@ void CCharacter::Tick()
 	m_PrevInput = m_Input;
 
 	m_PrevPos = m_Core.m_Pos;
+	m_KogGrenadeTeleTriggered = false;
 }
 
 void CCharacter::TickDeferred()

@@ -121,6 +121,7 @@ public:
 	bool m_KeepHooked;
 	int m_GameTeam;
 	bool m_CanMoveInFreeze;
+	bool m_KogGrenadeTeleTriggered;
 
 	bool Match(CCharacter *pChar) const;
 	void ResetPrediction();
