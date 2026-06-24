@@ -476,11 +476,6 @@ bool CCharacter::TryKogGrenadeTeleport()
 	m_IsBlueTeleGunTeleport = false;
 	m_KogGrenadeTeleTriggered = true;
 	pGrenade->Reset();
-	if(g_Config.m_SvKogGrenadeTeleDebug)
-	{
-		log_info("kog_grenade_tele", "cid=%d tick=%d teleported to (%.1f, %.1f)",
-			m_pPlayer->GetCid(), Server()->Tick(), m_TeleGunPos.x, m_TeleGunPos.y);
-	}
 	return true;
 }
 
@@ -497,13 +492,6 @@ bool CCharacter::HandleKogGrenadeTeleBeforeFire()
 		pGrenade != nullptr && pGrenade->StartTick() < Server()->Tick(),
 	};
 	const EKogGrenadeTeleResult Result = KogGrenadeTeleEvaluate(Input);
-
-	if(g_Config.m_SvKogGrenadeTeleDebug && Result != EKogGrenadeTeleResult::NOT_APPLICABLE)
-	{
-		log_info("kog_grenade_tele", "cid=%d tick=%d gate=%s press=%d live=%d reload=%d",
-			m_pPlayer->GetCid(), Server()->Tick(), KogGrenadeTeleResultName(Result),
-			Input.m_FirePress ? 1 : 0, Input.m_HasOwnedLiveGrenade ? 1 : 0, m_ReloadTimer);
-	}
 
 	if(Result == EKogGrenadeTeleResult::TELEPORT)
 		TryKogGrenadeTeleport();

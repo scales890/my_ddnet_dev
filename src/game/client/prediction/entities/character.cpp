@@ -285,13 +285,6 @@ static bool HandleKogGrenadeTeleBeforeFire(CCharacter *pChr)
 	};
 	const EKogGrenadeTeleResult Result = KogGrenadeTeleEvaluate(Input);
 
-	if(g_Config.m_SvKogGrenadeTeleDebug && Result != EKogGrenadeTeleResult::NOT_APPLICABLE)
-	{
-		log_info("kog_grenade_tele", "predict cid=%d tick=%d gate=%s press=%d live=%d reload=%d",
-			pChr->GetCid(), pChr->GameWorld()->GameTick(), KogGrenadeTeleResultName(Result),
-			Input.m_FirePress ? 1 : 0, Input.m_HasOwnedLiveGrenade ? 1 : 0, pChr->m_ReloadTimer);
-	}
-
 	if(Result == EKogGrenadeTeleResult::TELEPORT)
 	{
 		const float Ct = (pChr->GameWorld()->GameTick() - pGrenade->GetStartTick()) / (float)pChr->GameWorld()->GameTickSpeed();
@@ -304,11 +297,6 @@ static bool HandleKogGrenadeTeleBeforeFire(CCharacter *pChr)
 		pGrenade->Remove();
 		pChr->m_KogGrenadeTeleTriggered = true;
 		pChr->GameWorld()->CreatePredictedSound(TelePos, SOUND_WEAPON_SPAWN, pChr->GetCid());
-		if(g_Config.m_SvKogGrenadeTeleDebug)
-		{
-			log_info("kog_grenade_tele", "predict cid=%d tick=%d teleported to (%.1f, %.1f)",
-				pChr->GetCid(), pChr->GameWorld()->GameTick(), TelePos.x, TelePos.y);
-		}
 	}
 
 	return KogGrenadeTeleBlocksWeaponInput(Result);
