@@ -313,31 +313,6 @@ void CCollision::BuildMovingKogEnvelopeSampleTimes(std::vector<std::chrono::nano
 {
 	vTimes.clear();
 	vTimes.push_back(MovingKogEnvelopeTimeAt(0.0));
-	if(m_EnvelopeSyncTimeSeconds <= 0)
-		return;
-
-	const int SyncTicks = m_EnvelopeSyncTimeSeconds * m_EnvelopeTickSpeed;
-	if(SyncTicks <= 0)
-		return;
-
-	int PhaseTick = m_EnvelopeCurrentTick - m_EnvelopeSyncAnchorTick;
-	PhaseTick %= SyncTicks;
-	if(PhaseTick < 0)
-		PhaseTick += SyncTicks;
-
-	// Only add absolute end-of-cycle samples when the current tick is near the wrap point.
-	const int EndWindowTicks = std::max(3, m_EnvelopeTickSpeed / 10);
-	if(PhaseTick + EndWindowTicks < SyncTicks)
-		return;
-
-	const int64_t SyncNanos = (int64_t)m_EnvelopeSyncTimeSeconds * std::chrono::nanoseconds(1s).count();
-	static const int s_aEndOffsetsMs[] = {1, 2, 5, 10, 20, 50, 100, 200};
-	for(int OffsetMs : s_aEndOffsetsMs)
-	{
-		const int64_t OffsetNanos = (int64_t)OffsetMs * std::chrono::nanoseconds(1ms).count();
-		if(SyncNanos > OffsetNanos)
-			vTimes.push_back(std::chrono::nanoseconds(SyncNanos - OffsetNanos));
-	}
 }
 
 bool CCollision::PointInKogQuadAt(vec2 Pos, const CQuad &Quad, const CAnimatedQuadCorners &Cached, std::chrono::nanoseconds EnvelopeTime) const
