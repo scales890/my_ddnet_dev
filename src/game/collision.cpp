@@ -426,6 +426,22 @@ void CCollision::QueryKogQuadGrid(const std::vector<std::vector<int>> &Grid, flo
 	}
 }
 
+void CCollision::CollectKogQuadCandidates(const std::vector<CAnimatedQuadCorners> &vCachedCorners, const std::vector<std::vector<int>> &Grid, float QueryMinX, float QueryMinY, float QueryMaxX, float QueryMaxY, std::vector<uint32_t> &Visited, int &Generation, std::vector<int> &vCandidateIndices) const
+{
+	vCandidateIndices.clear();
+	const bool UseSpatialGrid = m_EnvelopeSyncTimeSeconds <= 0 && m_KogQuadGridWidthCells > 0 && !Grid.empty();
+	if(UseSpatialGrid)
+	{
+		QueryKogQuadGrid(Grid, QueryMinX, QueryMinY, QueryMaxX, QueryMaxY, vCachedCorners.size(), Visited, Generation);
+		vCandidateIndices = m_vKogQuadQueryCandidates;
+		return;
+	}
+
+	vCandidateIndices.reserve(vCachedCorners.size());
+	for(size_t i = 0; i < vCachedCorners.size(); i++)
+		vCandidateIndices.push_back((int)i);
+}
+
 bool CCollision::PointInKogQuadsAtEnvelopeTime(vec2 Pos, const std::vector<CMovingKogQuad> &vQuads, const std::vector<int> &vCandidateIndices, std::chrono::nanoseconds EnvelopeTime) const
 {
 	if(vCandidateIndices.empty() || !m_pEnvelopePoints || !m_pMapForEnvelopes)
@@ -473,17 +489,11 @@ bool CCollision::TestMovingQuadsAt(const std::vector<CMovingKogQuad> &vQuads, co
 		return false;
 	};
 
-	if(m_KogQuadGridWidthCells > 0 && !Grid.empty())
-	{
-		QueryKogQuadGrid(Grid, Pos.x - HalfSize.x, Pos.y - HalfSize.y, Pos.x + HalfSize.x, Pos.y + HalfSize.y, vCachedCorners.size(), Visited, Generation);
-		return TestCandidates(m_vKogQuadQueryCandidates);
-	}
-
-	std::vector<int> vAllIndices;
-	vAllIndices.reserve(vCachedCorners.size());
-	for(size_t i = 0; i < vCachedCorners.size(); i++)
-		vAllIndices.push_back((int)i);
-	return TestCandidates(vAllIndices);
+	std::vector<int> vCandidateIndices;
+	CollectKogQuadCandidates(vCachedCorners, Grid, Pos.x - HalfSize.x, Pos.y - HalfSize.y, Pos.x + HalfSize.x, Pos.y + HalfSize.y, Visited, Generation, vCandidateIndices);
+	if(vCandidateIndices.empty())
+		return false;
+	return TestCandidates(vCandidateIndices);
 }
 
 bool CCollision::TestMovingFreezeAt(vec2 Pos, vec2 BoxSize) const
@@ -509,23 +519,13 @@ bool CCollision::IntersectMovingQuads(const std::vector<CMovingKogQuad> &vQuads,
 	const int Steps = std::max(1, (int)(Distance / 4.0f) + 1);
 
 	std::vector<int> vCandidateIndices;
-	if(m_KogQuadGridWidthCells > 0 && !Grid.empty())
-	{
-		const float MinX = std::min(PrevPos.x, CurPos.x) - HalfSize.x;
-		const float MinY = std::min(PrevPos.y, CurPos.y) - HalfSize.y;
-		const float MaxX = std::max(PrevPos.x, CurPos.x) + HalfSize.x;
-		const float MaxY = std::max(PrevPos.y, CurPos.y) + HalfSize.y;
-		QueryKogQuadGrid(Grid, MinX, MinY, MaxX, MaxY, vCachedCorners.size(), Visited, Generation);
-		vCandidateIndices = m_vKogQuadQueryCandidates;
-		if(vCandidateIndices.empty())
-			return false;
-	}
-	else
-	{
-		vCandidateIndices.reserve(vCachedCorners.size());
-		for(size_t i = 0; i < vCachedCorners.size(); i++)
-			vCandidateIndices.push_back((int)i);
-	}
+	const float MinX = std::min(PrevPos.x, CurPos.x) - HalfSize.x;
+	const float MinY = std::min(PrevPos.y, CurPos.y) - HalfSize.y;
+	const float MaxX = std::max(PrevPos.x, CurPos.x) + HalfSize.x;
+	const float MaxY = std::max(PrevPos.y, CurPos.y) + HalfSize.y;
+	CollectKogQuadCandidates(vCachedCorners, Grid, MinX, MinY, MaxX, MaxY, Visited, Generation, vCandidateIndices);
+	if(vCandidateIndices.empty())
+		return false;
 
 	for(int Sample = 0; Sample < SampleCount; Sample++)
 	{
