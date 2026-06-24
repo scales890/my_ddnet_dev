@@ -4715,6 +4715,8 @@ void CGameClient::LoadMapSettings()
 {
 	m_MapBugs = CMapBugs::Create(Map()->BaseName(), Map()->Size(), Map()->Sha256());
 
+	g_Config.m_SvKogGrenadeTele = 0;
+
 	// Reset Tunezones
 	for(int TuneZone = 0; TuneZone < TuneZone::NUM; TuneZone++)
 	{

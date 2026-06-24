@@ -252,12 +252,52 @@ void CCharacter::HandleWeaponSwitch()
 	DoWeaponSwitch();
 }
 
+static CProjectile *FindOwnedLiveGrenade(CGameWorld *pWorld, int OwnerId)
+{
+	CProjectile *pBest = nullptr;
+	int BestStartTick = -1;
+	for(CEntity *pEnt = pWorld->FindFirst(CGameWorld::ENTTYPE_PROJECTILE); pEnt; pEnt = pEnt->TypeNext())
+	{
+		CProjectile *pProj = static_cast<CProjectile *>(pEnt);
+		if(pProj->GetOwner() == OwnerId && pProj->WeaponType() == WEAPON_GRENADE && pProj->IsAlive() && pProj->GetStartTick() > BestStartTick)
+		{
+			BestStartTick = pProj->GetStartTick();
+			pBest = pProj;
+		}
+	}
+	return pBest;
+}
+
+static bool TryKogGrenadeTeleport(CCharacter *pChr)
+{
+	CProjectile *pGrenade = FindOwnedLiveGrenade(pChr->GameWorld(), pChr->GetCid());
+	if(!pGrenade)
+		return false;
+
+	const float Ct = (pChr->GameWorld()->GameTick() - pGrenade->GetStartTick()) / (float)pChr->GameWorld()->GameTickSpeed();
+	vec2 TelePos = pGrenade->GetPos(Ct);
+
+	pChr->m_Core.m_Pos = TelePos;
+	pChr->m_Pos = TelePos;
+	pChr->m_Core.m_Vel = vec2(0, 0);
+	pGrenade->Remove();
+	pChr->GameWorld()->CreatePredictedSound(TelePos, SOUND_WEAPON_SPAWN, pChr->GetCid());
+	return true;
+}
+
 void CCharacter::FireWeapon()
 {
 	if(m_NumInputs < 2)
 		return;
 
 	if(!GameWorld()->m_WorldConfig.m_PredictWeapons)
+		return;
+
+	if(g_Config.m_SvKogGrenadeTele &&
+		m_Core.m_ActiveWeapon == WEAPON_GRENADE &&
+		CountInput(m_LatestPrevInput.m_Fire, m_LatestInput.m_Fire).m_Presses &&
+		!m_FreezeTime &&
+		TryKogGrenadeTeleport(this))
 		return;
 
 	if(m_ReloadTimer != 0)

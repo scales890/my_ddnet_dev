@@ -59,6 +59,9 @@ public:
 
 	bool CanCollide(int ClientId) override;
 	int GetOwnerId() const override { return m_Owner; }
+	int WeaponType() const { return m_Type; }
+	int StartTick() const { return m_StartTick; }
+	bool IsAlive() const { return !m_MarkedForDestroy; }
 };
 
 #endif

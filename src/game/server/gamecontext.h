@@ -133,6 +133,7 @@ class CGameContext : public IGameServer
 	CUuid m_GameUuid;
 	CMapBugs m_MapBugs;
 	bool m_MovingFreezeQuadsMapEnabled;
+	bool m_KogGrenadeTeleMapEnabled;
 	CPrng m_Prng;
 
 	bool m_Resetting;
@@ -213,6 +214,7 @@ public:
 	const IMap *Map() const override { return m_pMap.get(); }
 	CCollision *Collision() { return &m_Collision; }
 	bool MovingFreezeQuadsMapEnabled() const { return m_MovingFreezeQuadsMapEnabled; }
+	bool KogGrenadeTeleMapEnabled() const { return m_KogGrenadeTeleMapEnabled; }
 	CTuningParams *GlobalTuning() { return &m_aTuningList[0]; }
 	CTuningParams *TuningList() { return m_aTuningList; }
 	IAntibot *Antibot() { return m_pAntibot; }

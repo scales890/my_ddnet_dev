@@ -75,6 +75,7 @@ public:
 	void ResetHook();
 	void ResetInput();
 	void FireWeapon();
+	bool TryKogGrenadeTeleport();
 
 	void Die(int Killer, int Weapon, bool SendKillMsg = true);
 	bool TakeDamage(vec2 Force, int Dmg, int From, int Weapon);

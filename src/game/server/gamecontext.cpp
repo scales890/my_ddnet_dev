@@ -139,6 +139,7 @@ CGameContext::CGameContext(bool Resetting) :
 	m_aDeleteTempfile[0] = 0;
 	m_TeeHistorianActive = false;
 	m_MovingFreezeQuadsMapEnabled = false;
+	m_KogGrenadeTeleMapEnabled = false;
 }
 
 CGameContext::~CGameContext()
@@ -4477,8 +4478,10 @@ void CGameContext::OnInit(const void *pPersistentData)
 	Console()->ExecuteFile(g_Config.m_SvResetFile, IConsole::CLIENT_ID_UNSPECIFIED);
 
 	g_Config.m_SvKogQquadsEnable = 0;
+	g_Config.m_SvKogGrenadeTele = 0;
 	LoadMapSettings();
 	m_MovingFreezeQuadsMapEnabled = g_Config.m_SvKogQquadsEnable != 0;
+	m_KogGrenadeTeleMapEnabled = g_Config.m_SvKogGrenadeTele != 0;
 
 	m_Collision.InitMovingFreezeQuads(Map(), m_MovingFreezeQuadsMapEnabled, Server()->Tick());
 	if(m_MovingFreezeQuadsMapEnabled && !m_Collision.HasMovingKogQuads())

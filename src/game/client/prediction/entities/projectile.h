@@ -37,6 +37,9 @@ public:
 	const vec2 &GetDirection() const { return m_Direction; }
 	const int &GetOwner() const { return m_Owner; }
 	const int &GetStartTick() const { return m_StartTick; }
+	int WeaponType() const { return m_Type; }
+	bool IsAlive() const { return !m_MarkedForDestroy; }
+	void Remove() { m_MarkedForDestroy = true; }
 	CProjectile(CGameWorld *pGameWorld, int Id, const CProjectileData *pProj);
 
 private:

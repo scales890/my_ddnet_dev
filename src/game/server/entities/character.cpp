@@ -442,8 +442,52 @@ void CCharacter::HandleWeaponSwitch()
 	DoWeaponSwitch();
 }
 
+static CProjectile *FindOwnedLiveGrenade(CGameWorld *pWorld, int OwnerId)
+{
+	CProjectile *pBest = nullptr;
+	int BestStartTick = -1;
+	for(CEntity *pEnt = pWorld->FindFirst(CGameWorld::ENTTYPE_PROJECTILE); pEnt; pEnt = pEnt->TypeNext())
+	{
+		CProjectile *pProj = static_cast<CProjectile *>(pEnt);
+		if(pProj->GetOwnerId() == OwnerId && pProj->WeaponType() == WEAPON_GRENADE && pProj->IsAlive() && pProj->StartTick() > BestStartTick)
+		{
+			BestStartTick = pProj->StartTick();
+			pBest = pProj;
+		}
+	}
+	return pBest;
+}
+
+bool CCharacter::TryKogGrenadeTeleport()
+{
+	CProjectile *pGrenade = FindOwnedLiveGrenade(GameWorld(), m_pPlayer->GetCid());
+	if(!pGrenade)
+		return false;
+
+	const float Ct = (Server()->Tick() - pGrenade->StartTick()) / (float)Server()->TickSpeed();
+	vec2 GrenadePos = pGrenade->GetPos(Ct);
+	vec2 TelePos = GrenadePos;
+	GetNearestAirPosPlayer(GrenadePos, &TelePos);
+
+	GameServer()->CreateDeath(m_Pos, m_pPlayer->GetCid(), TeamMask());
+	m_Core.m_Pos = TelePos;
+	m_Pos = TelePos;
+	m_Core.m_Vel = vec2(0, 0);
+	GameServer()->CreateDeath(TelePos, m_pPlayer->GetCid(), TeamMask());
+	GameServer()->CreateSound(TelePos, SOUND_WEAPON_SPAWN, TeamMask());
+	pGrenade->Reset();
+	return true;
+}
+
 void CCharacter::FireWeapon()
 {
+	if(GameServer()->KogGrenadeTeleMapEnabled() &&
+		m_Core.m_ActiveWeapon == WEAPON_GRENADE &&
+		CountInput(m_LatestPrevInput.m_Fire, m_LatestInput.m_Fire).m_Presses &&
+		!m_FreezeTime &&
+		TryKogGrenadeTeleport())
+		return;
+
 	if(m_ReloadTimer != 0)
 	{
 		if(m_LatestInput.m_Fire & 1)
