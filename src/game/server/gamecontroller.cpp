@@ -646,10 +646,13 @@ void IGameController::OnPlayerEnvelopeRaceStart(int ClientId)
 	if(!GameServer()->MovingFreezeQuadsMapEnabled() || !GameServer()->Collision()->HasMovingKogQuads())
 		return;
 
-	UpdatePlayerEnvelopeRoundStart(ClientId);
-
 	CPlayer *pPlayer = GameServer()->m_apPlayers[ClientId];
 	if(!pPlayer)
+		return;
+
+	const bool FirstSyncForRun = pPlayer->m_EnvelopeRoundStartTick < 0;
+	UpdatePlayerEnvelopeRoundStart(ClientId);
+	if(!FirstSyncForRun)
 		return;
 
 	const int LatencyMs = pPlayer->m_Latency.m_Min;
