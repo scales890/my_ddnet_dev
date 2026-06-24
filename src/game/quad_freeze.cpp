@@ -89,6 +89,11 @@ bool PointInQuad(vec2 Point, const vec2 aCorners[4])
 	return Positive == 0 || Negative == 0;
 }
 
+bool PointInQuadAabb(vec2 Point, float MinX, float MinY, float MaxX, float MaxY)
+{
+	return Point.x >= MinX && Point.x <= MaxX && Point.y >= MinY && Point.y <= MaxY;
+}
+
 bool BoxOverlapsQuad(vec2 Center, vec2 HalfSize, const vec2 aCorners[4])
 {
 	if(PointInQuad(Center, aCorners))
@@ -117,7 +122,7 @@ bool BoxOverlapsQuad(vec2 Center, vec2 HalfSize, const vec2 aCorners[4])
 	return false;
 }
 
-std::chrono::nanoseconds EnvelopeTimeFromTick(int CurrentTick, int RoundStartTick, int TickSpeed, int SyncTimeSeconds, double IntraTick)
+std::chrono::nanoseconds EnvelopeTimeFromTick(int CurrentTick, int RoundStartTick, int TickSpeed, int SyncTimeSeconds, int SyncAnchorTick, double IntraTick)
 {
 	const std::chrono::nanoseconds NanosPerTick = std::chrono::nanoseconds(1s) / TickSpeed;
 	int EnvelopeTick = CurrentTick - RoundStartTick;
@@ -125,7 +130,12 @@ std::chrono::nanoseconds EnvelopeTimeFromTick(int CurrentTick, int RoundStartTic
 	{
 		const int SyncTicks = SyncTimeSeconds * TickSpeed;
 		if(SyncTicks > 0)
-			EnvelopeTick = CurrentTick % SyncTicks;
+		{
+			const int BaseTick = SyncAnchorTick >= 0 ? SyncAnchorTick : 0;
+			EnvelopeTick = (CurrentTick - BaseTick) % SyncTicks;
+			if(EnvelopeTick < 0)
+				EnvelopeTick += SyncTicks;
+		}
 	}
 	return EnvelopeTick * NanosPerTick + std::chrono::duration_cast<std::chrono::nanoseconds>(IntraTick * NanosPerTick);
 }

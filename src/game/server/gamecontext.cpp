@@ -4481,7 +4481,7 @@ void CGameContext::OnInit(const void *pPersistentData)
 	LoadMapSettings();
 	m_MovingFreezeQuadsMapEnabled = g_Config.m_SvKogQquadsEnable != 0;
 
-	m_Collision.InitMovingFreezeQuads(Map(), m_MovingFreezeQuadsMapEnabled);
+	m_Collision.InitMovingFreezeQuads(Map(), m_MovingFreezeQuadsMapEnabled, Server()->Tick());
 	if(m_MovingFreezeQuadsMapEnabled && !m_Collision.HasMovingKogQuads())
 		log_info("kog_qquads", "enabled by map settings but no QFr/QUnFr quads with position envelope found");
 	else if(m_MovingFreezeQuadsMapEnabled && g_Config.m_SvKogQquadsSyncTime > 0)

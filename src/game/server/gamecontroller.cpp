@@ -614,7 +614,14 @@ int IGameController::SnapEnvelopeRoundStartTick(int SnappingClient) const
 	{
 		const int SyncTicks = SyncTime * Server()->TickSpeed();
 		const int Now = Server()->Tick();
-		const int PhaseTick = SyncTicks > 0 ? Now % SyncTicks : 0;
+		const int AnchorTick = GameServer()->Collision()->KogQuadSyncAnchorTick();
+		int PhaseTick = 0;
+		if(SyncTicks > 0)
+		{
+			PhaseTick = (Now - AnchorTick) % SyncTicks;
+			if(PhaseTick < 0)
+				PhaseTick += SyncTicks;
+		}
 		int LagTicks = 0;
 		if(SnappingClient >= 0 && SnappingClient != SERVER_DEMO_CLIENT)
 		{

@@ -2314,8 +2314,12 @@ void CCharacter::DDRacePostCoreTick()
 			return;
 	}
 
-	if(Collision()->HasMovingFreezeQuads() && Collision()->IntersectMovingFreeze(m_PrevPos, m_Pos, CCharacterCore::PhysicalSizeVec2()))
-		Freeze();
+	if(Collision()->HasMovingFreezeQuads())
+	{
+		const vec2 BoxSize = CCharacterCore::PhysicalSizeVec2();
+		if(Collision()->IntersectMovingFreeze(m_PrevPos, m_Pos, BoxSize) || Collision()->PointInMovingFreeze(m_Pos, BoxSize))
+			Freeze();
+	}
 
 	if(!m_Core.m_DeepFrozen && Collision()->HasMovingUnfreezeQuads())
 	{
