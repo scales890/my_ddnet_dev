@@ -532,6 +532,7 @@ MACRO_CONFIG_INT(SvFreezeDelay, sv_freeze_delay, 3, 1, 30, CFGFLAG_SERVER | CFGF
 MACRO_CONFIG_INT(SvKogQquadsEnable, sv_kog_qquads_enable, 0, 0, 1, CFGFLAG_SERVER | CFGFLAG_GAME, "Enable KOG moving freeze quads (set via embedded map settings only)")
 MACRO_CONFIG_INT(SvKogQquadsDebug, sv_kog_qquads_debug, 0, 0, 1, CFGFLAG_SERVER, "Log moving quad sync collision diagnostics")
 MACRO_CONFIG_INT(SvKogGrenadeTele, sv_kog_grenade_tele, 0, 0, 1, CFGFLAG_SERVER | CFGFLAG_GAME, "Enable KOG grenade teleport recall (set via embedded map settings only)")
+MACRO_CONFIG_INT(SvKogGrenadeTeleDebug, sv_kog_grenade_tele_debug, 0, 0, 1, CFGFLAG_SERVER, "Log KOG grenade teleport and fire-block diagnostics")
 MACRO_CONFIG_INT(ClDDRaceBindsSet, cl_race_binds_set, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "What level the DDRace binds are set to (this is automated, you don't need to use this)")
 MACRO_CONFIG_INT(SvEndlessSuperHook, sv_endless_super_hook, 0, 0, 1, CFGFLAG_SERVER, "Endless hook for super players on/off")
 MACRO_CONFIG_INT(SvHideScore, sv_hide_score, 0, 0, 1, CFGFLAG_SERVER, "Whether players scores will be announced or not")

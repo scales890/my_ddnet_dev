@@ -7,9 +7,12 @@
 
 #include <engine/shared/config.h>
 
+#include <base/log.h>
+
 #include <generated/client_data.h>
 
 #include <game/collision.h>
+#include <game/grenade_teleport.h>
 #include <game/mapitems.h>
 
 // Character, "physical" player's part
@@ -270,45 +273,45 @@ static CProjectile *FindOwnedLiveGrenade(CGameWorld *pWorld, int OwnerId)
 
 static bool HandleKogGrenadeTeleBeforeFire(CCharacter *pChr)
 {
-	if(!g_Config.m_SvKogGrenadeTele)
-		return false;
-	if(pChr->m_Core.m_ActiveWeapon != WEAPON_GRENADE)
-		return false;
-
 	CProjectile *pGrenade = FindOwnedLiveGrenade(pChr->GameWorld(), pChr->GetCid());
-	const bool Press = CountInput(pChr->m_LatestPrevInput.m_Fire, pChr->m_LatestInput.m_Fire).m_Presses != 0;
-	const bool FireHeld = (pChr->m_LatestInput.m_Fire & 1) != 0;
+	const SKogGrenadeTeleInput Input = {
+		g_Config.m_SvKogGrenadeTele != 0,
+		pChr->m_Core.m_ActiveWeapon,
+		pGrenade != nullptr,
+		CountInput(pChr->m_LatestPrevInput.m_Fire, pChr->m_LatestInput.m_Fire).m_Presses != 0,
+		pChr->m_FreezeTime > 0,
+		pChr->m_KogGrenadeTeleTriggered,
+		pGrenade != nullptr && pGrenade->GetStartTick() < pChr->GameWorld()->GameTick(),
+	};
+	const EKogGrenadeTeleResult Result = KogGrenadeTeleEvaluate(Input);
 
-	if(Press && !pChr->m_FreezeTime)
+	if(g_Config.m_SvKogGrenadeTeleDebug && Result != EKogGrenadeTeleResult::NOT_APPLICABLE)
 	{
-		if(pChr->m_KogGrenadeTeleTriggered)
-			return true;
-		if(pGrenade && pGrenade->GetStartTick() < pChr->GameWorld()->GameTick())
-		{
-			const float Ct = (pChr->GameWorld()->GameTick() - pGrenade->GetStartTick()) / (float)pChr->GameWorld()->GameTickSpeed();
-			vec2 TelePos = pGrenade->GetPos(Ct);
+		log_info("kog_grenade_tele", "predict cid=%d tick=%d gate=%s press=%d live=%d reload=%d",
+			pChr->GetCid(), pChr->GameWorld()->GameTick(), KogGrenadeTeleResultName(Result),
+			Input.m_FirePress ? 1 : 0, Input.m_HasOwnedLiveGrenade ? 1 : 0, pChr->m_ReloadTimer);
+	}
 
-			pChr->m_Core.m_Pos = TelePos;
-			pChr->m_Pos = TelePos;
-			pChr->m_PrevPos = TelePos;
-			pChr->m_Core.m_Vel = vec2(0, 0);
-			pGrenade->Remove();
-			pChr->m_KogGrenadeTeleTriggered = true;
-			pChr->GameWorld()->CreatePredictedSound(TelePos, SOUND_WEAPON_SPAWN, pChr->GetCid());
-			return true;
+	if(Result == EKogGrenadeTeleResult::TELEPORT)
+	{
+		const float Ct = (pChr->GameWorld()->GameTick() - pGrenade->GetStartTick()) / (float)pChr->GameWorld()->GameTickSpeed();
+		vec2 TelePos = pGrenade->GetPos(Ct);
+
+		pChr->m_Core.m_Pos = TelePos;
+		pChr->m_Pos = TelePos;
+		pChr->m_PrevPos = TelePos;
+		pChr->m_Core.m_Vel = vec2(0, 0);
+		pGrenade->Remove();
+		pChr->m_KogGrenadeTeleTriggered = true;
+		pChr->GameWorld()->CreatePredictedSound(TelePos, SOUND_WEAPON_SPAWN, pChr->GetCid());
+		if(g_Config.m_SvKogGrenadeTeleDebug)
+		{
+			log_info("kog_grenade_tele", "predict cid=%d tick=%d teleported to (%.1f, %.1f)",
+				pChr->GetCid(), pChr->GameWorld()->GameTick(), TelePos.x, TelePos.y);
 		}
 	}
 
-	if(pChr->m_KogGrenadeTeleTriggered)
-		return true;
-
-	if(pGrenade)
-		return true;
-
-	if(FireHeld && !Press)
-		return true;
-
-	return false;
+	return KogGrenadeTeleBlocksWeaponInput(Result);
 }
 
 void CCharacter::FireWeapon()
@@ -331,12 +334,12 @@ void CCharacter::FireWeapon()
 	bool FullAuto = false;
 	if(m_Core.m_ActiveWeapon == WEAPON_GRENADE || m_Core.m_ActiveWeapon == WEAPON_SHOTGUN || m_Core.m_ActiveWeapon == WEAPON_LASER)
 		FullAuto = true;
+	if(KogGrenadeTeleDisableFullAuto(g_Config.m_SvKogGrenadeTele != 0, m_Core.m_ActiveWeapon))
+		FullAuto = false;
 	if(m_Core.m_Jetpack && m_Core.m_ActiveWeapon == WEAPON_GUN)
 		FullAuto = true;
 	if(m_FrozenLastTick)
 		FullAuto = true;
-	if(g_Config.m_SvKogGrenadeTele && m_Core.m_ActiveWeapon == WEAPON_GRENADE)
-		FullAuto = false;
 
 	// don't fire hammer when player is deep and sv_deepfly is disabled
 	if(!g_Config.m_SvDeepfly && m_Core.m_ActiveWeapon == WEAPON_HAMMER && m_Core.m_DeepFrozen)
@@ -349,9 +352,6 @@ void CCharacter::FireWeapon()
 
 	if(FullAuto && (m_LatestInput.m_Fire & 1) && m_Core.m_ActiveWeapon >= 0 && m_Core.m_aWeapons[m_Core.m_ActiveWeapon].m_Ammo)
 		WillFire = true;
-
-	if(g_Config.m_SvKogGrenadeTele && m_Core.m_ActiveWeapon == WEAPON_GRENADE && !CountInput(m_LatestPrevInput.m_Fire, m_LatestInput.m_Fire).m_Presses)
-		WillFire = false;
 
 	if(!WillFire)
 		return;
@@ -525,6 +525,12 @@ void CCharacter::FireWeapon()
 			true, //Explosive
 			SOUND_GRENADE_EXPLODE //SoundImpact
 		); //SoundImpact
+
+		if(g_Config.m_SvKogGrenadeTeleDebug)
+		{
+			log_info("kog_grenade_tele", "predict cid=%d tick=%d spawned grenade at (%.1f, %.1f) dir=(%.2f, %.2f)",
+				GetCid(), GameWorld()->GameTick(), ProjStartPos.x, ProjStartPos.y, Direction.x, Direction.y);
+		}
 
 		GameWorld()->CreatePredictedSound(m_Pos, SOUND_GRENADE_FIRE, GetCid());
 	}

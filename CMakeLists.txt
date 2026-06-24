@@ -2314,6 +2314,8 @@ set_src(GAME_SHARED GLOB src/game
   prng.h
   quad_freeze.cpp
   quad_freeze.h
+  grenade_teleport.cpp
+  grenade_teleport.h
   race_state.h
   team_state.h
   teamscore.cpp
@@ -3266,6 +3268,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     os_test.cpp
     packer_test.cpp
     prng_test.cpp
+    grenade_teleport_test.cpp
     quad_freeze_test.cpp
     replace_words_test.cpp
     score_test.cpp

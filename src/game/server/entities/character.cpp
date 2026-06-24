@@ -18,6 +18,7 @@
 #include <generated/server_data.h>
 
 #include <game/mapitems.h>
+#include <game/grenade_teleport.h>
 #include <game/server/gamecontext.h>
 #include <game/server/gamecontroller.h>
 #include <game/server/player.h>
@@ -475,42 +476,39 @@ bool CCharacter::TryKogGrenadeTeleport()
 	m_IsBlueTeleGunTeleport = false;
 	m_KogGrenadeTeleTriggered = true;
 	pGrenade->Reset();
+	if(g_Config.m_SvKogGrenadeTeleDebug)
+	{
+		log_info("kog_grenade_tele", "cid=%d tick=%d teleported to (%.1f, %.1f)",
+			m_pPlayer->GetCid(), Server()->Tick(), m_TeleGunPos.x, m_TeleGunPos.y);
+	}
 	return true;
 }
 
 bool CCharacter::HandleKogGrenadeTeleBeforeFire()
 {
-	if(!GameServer()->KogGrenadeTeleMapEnabled())
-		return false;
-	if(m_Core.m_ActiveWeapon != WEAPON_GRENADE)
-		return false;
-
 	CProjectile *pGrenade = FindOwnedLiveGrenade(GameWorld(), m_pPlayer->GetCid());
-	const bool Press = CountInput(m_LatestPrevInput.m_Fire, m_LatestInput.m_Fire).m_Presses != 0;
-	const bool FireHeld = (m_LatestInput.m_Fire & 1) != 0;
+	const SKogGrenadeTeleInput Input = {
+		GameServer()->KogGrenadeTeleMapEnabled(),
+		m_Core.m_ActiveWeapon,
+		pGrenade != nullptr,
+		CountInput(m_LatestPrevInput.m_Fire, m_LatestInput.m_Fire).m_Presses != 0,
+		m_FreezeTime > 0,
+		m_KogGrenadeTeleTriggered,
+		pGrenade != nullptr && pGrenade->StartTick() < Server()->Tick(),
+	};
+	const EKogGrenadeTeleResult Result = KogGrenadeTeleEvaluate(Input);
 
-	if(Press && !m_FreezeTime)
+	if(g_Config.m_SvKogGrenadeTeleDebug && Result != EKogGrenadeTeleResult::NOT_APPLICABLE)
 	{
-		if(m_KogGrenadeTeleTriggered)
-			return true;
-		if(pGrenade && pGrenade->StartTick() < Server()->Tick())
-		{
-			TryKogGrenadeTeleport();
-			return true;
-		}
+		log_info("kog_grenade_tele", "cid=%d tick=%d gate=%s press=%d live=%d reload=%d",
+			m_pPlayer->GetCid(), Server()->Tick(), KogGrenadeTeleResultName(Result),
+			Input.m_FirePress ? 1 : 0, Input.m_HasOwnedLiveGrenade ? 1 : 0, m_ReloadTimer);
 	}
 
-	if(m_KogGrenadeTeleTriggered)
-		return true;
+	if(Result == EKogGrenadeTeleResult::TELEPORT)
+		TryKogGrenadeTeleport();
 
-	if(pGrenade)
-		return true;
-
-	// Only a new click may fire the first grenade; holding never does.
-	if(FireHeld && !Press)
-		return true;
-
-	return false;
+	return KogGrenadeTeleBlocksWeaponInput(Result);
 }
 
 void CCharacter::FireWeapon()
@@ -534,14 +532,14 @@ void CCharacter::FireWeapon()
 	bool FullAuto = false;
 	if(m_Core.m_ActiveWeapon == WEAPON_GRENADE || m_Core.m_ActiveWeapon == WEAPON_SHOTGUN || m_Core.m_ActiveWeapon == WEAPON_LASER)
 		FullAuto = true;
+	if(KogGrenadeTeleDisableFullAuto(GameServer()->KogGrenadeTeleMapEnabled(), m_Core.m_ActiveWeapon))
+		FullAuto = false;
 	if(m_Core.m_Jetpack && m_Core.m_ActiveWeapon == WEAPON_GUN)
 		FullAuto = true;
 	// allow firing directly after coming out of freeze or being unfrozen
 	// by something
 	if(m_FrozenLastTick)
 		FullAuto = true;
-	if(GameServer()->KogGrenadeTeleMapEnabled() && m_Core.m_ActiveWeapon == WEAPON_GRENADE)
-		FullAuto = false;
 
 	// don't fire hammer when player is deep and sv_deepfly is disabled
 	if(!g_Config.m_SvDeepfly && m_Core.m_ActiveWeapon == WEAPON_HAMMER && m_Core.m_DeepFrozen)
@@ -554,9 +552,6 @@ void CCharacter::FireWeapon()
 
 	if(FullAuto && (m_LatestInput.m_Fire & 1) && m_Core.m_ActiveWeapon >= 0 && m_Core.m_aWeapons[m_Core.m_ActiveWeapon].m_Ammo)
 		WillFire = true;
-
-	if(GameServer()->KogGrenadeTeleMapEnabled() && m_Core.m_ActiveWeapon == WEAPON_GRENADE && !CountInput(m_LatestPrevInput.m_Fire, m_LatestInput.m_Fire).m_Presses)
-		WillFire = false;
 
 	if(!WillFire)
 		return;
@@ -685,6 +680,12 @@ void CCharacter::FireWeapon()
 			SOUND_GRENADE_EXPLODE, //SoundImpact
 			MouseTarget // MouseTarget
 		);
+
+		if(g_Config.m_SvKogGrenadeTeleDebug)
+		{
+			log_info("kog_grenade_tele", "cid=%d tick=%d spawned grenade at (%.1f, %.1f) dir=(%.2f, %.2f)",
+				m_pPlayer->GetCid(), Server()->Tick(), ProjStartPos.x, ProjStartPos.y, Direction.x, Direction.y);
+		}
 
 		GameServer()->CreateSound(m_Pos, SOUND_GRENADE_FIRE, TeamMask()); // NOLINT(clang-analyzer-unix.Malloc)
 	}
