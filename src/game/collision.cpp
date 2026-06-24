@@ -312,7 +312,7 @@ std::chrono::nanoseconds CCollision::MovingKogEnvelopeTimeAt(double IntraTick) c
 void CCollision::BuildMovingKogEnvelopeSampleTimes(std::vector<std::chrono::nanoseconds> &vTimes) const
 {
 	vTimes.clear();
-	vTimes.push_back(MovingKogEnvelopeTimeAt(0.0));
+	vTimes.push_back(MovingKogEnvelopeTimeAt(KOG_QUAD_ENVELOPE_INTRA_SAMPLE));
 }
 
 bool CCollision::PointInKogQuadAt(vec2 Pos, const CQuad &Quad, const CAnimatedQuadCorners &Cached, std::chrono::nanoseconds EnvelopeTime) const
@@ -342,7 +342,7 @@ void CCollision::RebuildAnimatedQuadCache()
 
 	auto RebuildOneCache = [&](const std::vector<CMovingKogQuad> &vQuads, std::vector<CAnimatedQuadCorners> &vCached) {
 		vCached.reserve(vQuads.size());
-		const auto SampleTime = MovingKogEnvelopeTimeAt(0.0);
+		const auto SampleTime = MovingKogEnvelopeTimeAt(KOG_QUAD_ENVELOPE_INTRA_SAMPLE);
 		for(const CMovingKogQuad &KogQuad : vQuads)
 		{
 			CAnimatedQuadCorners Cached;
